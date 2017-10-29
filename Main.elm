@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import AnimationFrame
 import Html exposing (Html, text, div)
@@ -6,27 +6,50 @@ import Html.Attributes exposing (width, height, style)
 import Keyboard
 import Mouse
 import Task exposing (Task)
+import Date exposing (Date)
 import Time exposing (Time)
 import Window
-
-
-type alias Blockchain =
-    { test : String }
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onClick, onInput)
+import Status
+import Block
 
 
 type alias Model =
     { keys : Keys
     , mouse : Mouse.Position
     , window : Window.Size
-    , blockchain : Blockchain
+    , statusModel : Status.Model
+    , blockModel : Block.Model
+    , query : String
+    , time : Time
+    }
+
+
+initialModel : Model
+initialModel =
+    { keys = Keys False False False False False False False
+    , mouse = Mouse.Position 0 0
+    , window = Window.Size 0 0
+    , statusModel = Status.initialModel
+    , blockModel = Block.initialModel
+    , query = ""
+    , time = 0
     }
 
 
 type Msg
-    = KeyChange Bool Keyboard.KeyCode
+    = StatusMsg Status.Msg
+    | BlockMsg Block.Msg
+    | JsMsg String
+    | Query String
+    | KeyChange Bool Keyboard.KeyCode
     | Animate Time
     | Resize Window.Size
     | MouseMove Mouse.Position
+    | Tick Time
+    | Foo
 
 
 type alias Keys =
@@ -45,22 +68,27 @@ main =
     Html.program
         { init = init
         , view = view
-        , subscriptions = subscriptions
         , update = update
+        , subscriptions = subscriptions
         }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { blockchain = Blockchain 0
-      , keys = Keys False False False False False False False
-      , mouse = Mouse.Position 0 0
-      , window = Window.Size 0 0
-      }
-    , Cmd.batch
-        [ Task.perform Resize Window.size
-        ]
-    )
+    let
+        ( model, msg ) =
+            update Foo initialModel
+    in
+        ( model, Cmd.batch [ msg, Task.perform Resize Window.size ] )
+
+
+
+-- ( initialModel
+--   -- , Cmd.batch
+--   --     [ Task.perform Resize Window.size
+--   --     , Task.perform Foo Cmd.none
+--   --     ]
+-- )
 
 
 subscriptions : Model -> Sub Msg
@@ -71,12 +99,48 @@ subscriptions _ =
         , Keyboard.ups (KeyChange False)
         , Mouse.moves MouseMove
         , Window.resizes Resize
+        , Time.every (Time.second * 5) Tick
+        , jsEvents JsMsg
         ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update action model =
     case action of
+        Tick time ->
+            let
+                ( updatedModel, cmd ) =
+                    update Foo model
+            in
+                ( { updatedModel | time = time }, cmd )
+
+        Foo ->
+            let
+                ( updatedModel, cmd ) =
+                    Status.update Status.Fetch model.statusModel
+            in
+                ( { model | statusModel = updatedModel }, Cmd.map StatusMsg cmd )
+
+        StatusMsg statusMsg ->
+            let
+                ( updatedModel, cmd ) =
+                    Status.update statusMsg model.statusModel
+            in
+                ( { model | statusModel = updatedModel }, Cmd.map StatusMsg cmd )
+
+        BlockMsg blockMsg ->
+            let
+                ( updatedModel, cmd ) =
+                    Block.update blockMsg model.blockModel
+            in
+                ( { model | blockModel = updatedModel }, Cmd.map BlockMsg cmd )
+
+        Query query ->
+            ( model, Cmd.none )
+
+        JsMsg _ ->
+            ( model, Cmd.none )
+
         KeyChange bool code ->
             ( { model | keys = keyHandler bool code model.keys }, Cmd.none )
 
@@ -87,13 +151,7 @@ update action model =
             ( { model | window = size }, Cmd.none )
 
         Animate dt ->
-            ( { model
-                | blockchain =
-                    model.blockchain
-                        |> move model.keys
-              }
-            , Cmd.none
-            )
+            ( model |> move model.keys, Cmd.none )
 
 
 keyHandler : Bool -> Keyboard.KeyCode -> Keys -> Keys
@@ -124,8 +182,8 @@ keyHandler bool keyCode keys =
             keys
 
 
-move : Keys -> Blockchain -> Blockchain
-move { left, right, up, down, space, pgup, pgdown } blockchain =
+move : Keys -> Model -> Model
+move { left, right, up, down, space, pgup, pgdown } model =
     let
         direction a b =
             if a == b then
@@ -138,7 +196,30 @@ move { left, right, up, down, space, pgup, pgdown } blockchain =
         velocity =
             direction left right
     in
-        { blockchain | test = velocity }
+        model
+
+
+searchBar : Model -> Html Msg
+searchBar model =
+    div [ class "row flex-items-xs-middle" ]
+        [ div [ class "col-xs-3" ] []
+        , div [ class "col-xs-6" ]
+            [ input
+                [ name "query"
+                , placeholder "Block, transaction, etc."
+                , class
+                    "search form-control"
+                , onInput Query
+                , value model.query
+                ]
+                []
+            ]
+        ]
+
+
+statusView : Model -> Html Msg
+statusView model =
+    Html.map StatusMsg (Status.view model.statusModel)
 
 
 view : Model -> Html Msg
@@ -152,6 +233,10 @@ view model =
                 [ ( "width", toString window.width ++ "px" )
                 , ( "height", toString window.height ++ "px" )
                 , ( "background", "#000" )
+                , ( "color", "#0F0" )
+                , ( "display", "flex" )
+                , ( "justify-content", "center" )
+                , ( "align-items", "center" )
                 ]
             ]
             [ div
@@ -162,8 +247,20 @@ view model =
                     , ( "text-align", "center" )
                     , ( "left", "1rem" )
                     , ( "right", "1rem" )
-                    , ( "top", "1rem" )
+                    , ( "bottom", "1rem" )
                     ]
                 ]
                 [ text <| toString model ]
+            , div []
+                [ div [] [ text <| toString <| Date.fromTime model.time ]
+                , statusView model
+                , searchBar model
+                ]
             ]
+
+
+
+-- port for listening for events from JavaScript
+
+
+port jsEvents : (String -> msg) -> Sub msg

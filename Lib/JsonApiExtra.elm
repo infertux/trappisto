@@ -4,7 +4,6 @@ import Http
 import Json.Decode
 import Json.Encode
 import Time exposing (Time)
-import BasicAuth
 
 
 type alias RequestParams a =
@@ -18,14 +17,14 @@ type alias RequestParams a =
     }
 
 
-post : String -> String -> (Result Http.Error a -> msg) -> Json.Decode.Decoder a -> Cmd msg
+post : String -> Json.Encode.Value -> (Result Http.Error a -> msg) -> Json.Decode.Decoder a -> Cmd msg
 post method params result decoder =
     Http.send result <|
         Http.request <|
             makeRequest method params decoder
 
 
-makeRequest : String -> String -> Json.Decode.Decoder a -> RequestParams a
+makeRequest : String -> Json.Encode.Value -> Json.Decode.Decoder a -> RequestParams a
 makeRequest method params decoder =
     let
         json =
@@ -33,15 +32,14 @@ makeRequest method params decoder =
                 [ ( "jsonrpc", Json.Encode.string "2.0" )
                 , ( "id", Json.Encode.int 0 )
                 , ( "method", Json.Encode.string method )
-                , ( "params", Json.Encode.list [] )
+                , ( "params", params )
                 ]
     in
         { method = "POST"
         , url = "/rpc"
         , body = Http.jsonBody json
         , expect = Http.expectJson decoder
-        , headers =
-            []
+        , headers = []
         , timeout = Nothing
         , withCredentials = False
         }
