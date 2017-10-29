@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Trappist0 - Decred Block Explorer</title>
+
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <meta name="description" content="Trappist0 - Decred Block Explorer">
+    <meta name="application-name" content="Trappist0">
+
+    <meta property="og:url" content="https://localhost">
+    <meta property="og:title" content="Trappist0">
+    <meta property="og:description" content="Trappist0 - Decred Block Explorer">
+    <meta property="og:image" content="https://localhost/assets/images/logo.png">
+
+    <link rel="icon" href="assets/images/favicon/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/favicon/apple-touch-icon.png">
+
+    <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400"> -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+
+    <script src="elm.js" async defer></script>
+
+    <style>
+      body {
+        background: #000;
+        color: #0F0;
+        font-family: monospace;
+        font-size: 2rem;
+      }
+      hr {
+        border-color: #FFF;
+      }
+    </style>
+  </head>
+  <body>
+  <script>
+    window.onerror = function(msg, url, line) {
+      alert('Oops, a JavaScript error occured, please send a screenshot to the website administrator.\nMessage: ' + msg + '\nURL: ' + url + '\nLine: ' + line);
+      return false; 
+    };
+  </script>
+
+  <div id="elm-app" class="container-fluid">Loading...</div>
+
+  <script>
+    window.addEventListener('load', () => {
+      const elmAppDiv = document.querySelector('#elm-app');
+      const elmApp = Elm.Main.embed(elmAppDiv);
+
+      // Prefill search bar with URL query part
+      // const filter = utils.getParameterByName("filter") || "";
+      // elmUserListApp.ports.jsEvents.send(["UserList.Search", filter]);
+
+      // Hook {Ctrl,Cmd}+F to our search bar
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && (String.fromCharCode(e.which).toLowerCase() === 'f')) {
+          e.preventDefault();
+          document.querySelector("input.search:first").get(0).select();
+        }
+      });
+
+      // Fetch more results when we scroll to the bottom
+      // $(window).scroll(function() {
+      //   if($(window).scrollTop() + $(window).height() == $(document).height()) {
+      //     elmUserListApp.ports.jsEvents.send(["UserList.Fetch"]);
+      //   }
+      // });
+    });
+  </script>
+  </body>
+</html>

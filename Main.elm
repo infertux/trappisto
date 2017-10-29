@@ -201,19 +201,15 @@ move { left, right, up, down, space, pgup, pgdown } model =
 
 searchBar : Model -> Html Msg
 searchBar model =
-    div [ class "row flex-items-xs-middle" ]
-        [ div [ class "col-xs-3" ] []
-        , div [ class "col-xs-6" ]
-            [ input
-                [ name "query"
-                , placeholder "Block, transaction, etc."
-                , class
-                    "search form-control"
-                , onInput Query
-                , value model.query
-                ]
-                []
+    div [ class "col" ]
+        [ input
+            [ name "query"
+            , placeholder "Block, transaction, etc."
+            , class "search form-control"
+            , onInput Query
+            , value model.query
             ]
+            []
         ]
 
 
@@ -227,34 +223,44 @@ view model =
     let
         window =
             model.window
-    in
-        div
-            [ style
-                [ ( "width", toString window.width ++ "px" )
-                , ( "height", toString window.height ++ "px" )
-                , ( "background", "#000" )
-                , ( "color", "#0F0" )
-                , ( "display", "flex" )
-                , ( "justify-content", "center" )
-                , ( "align-items", "center" )
+
+        header =
+            [ div [ class "row" ]
+                [ div [ class "col" ]
+                    [ pre []
+                        [ text " ______   _______  _______  _______  _______  ______  \n(  __  \\ (  ____ \\(  ____ \\(  ____ )(  ____ \\(  __  \\ \n| (  \\  )| (    \\/| (    \\/| (    )|| (    \\/| (  \\  )\n| |   ) || (__    | |      | (____)|| (__    | |   ) |\n| |   | ||  __)   | |      |     __)|  __)   | |   | |\n| |   ) || (      | |      | (\\ (   | (      | |   ) |\n| (__/  )| (____/\\| (____/\\| ) \\ \\__| (____/\\| (__/  )\n(______/ (_______/(_______/|/   \\__/(_______/(______/ \n"
+                        ]
+                    ]
                 ]
             ]
+
+        content =
+            [ div [ class "row" ]
+                [ searchBar model
+                ]
+            , div [ class "row" ]
+                [ div [ class "col" ] [ text <| toString <| Date.fromTime model.time ]
+                , statusView model
+                ]
+            ]
+
+        debug =
             [ div
                 [ style
-                    [ ( "position", "absolute" )
-                    , ( "font-family", "monospace" )
+                    [ ( "font-size", "1rem" )
                     , ( "color", "white" )
                     , ( "text-align", "center" )
-                    , ( "left", "1rem" )
-                    , ( "right", "1rem" )
-                    , ( "bottom", "1rem" )
                     ]
                 ]
                 [ text <| toString model ]
-            , div []
-                [ div [] [ text <| toString <| Date.fromTime model.time ]
-                , statusView model
-                , searchBar model
+            ]
+    in
+        div [ class "row" ]
+            [ div [ class "col text-center" ]
+                [ div [ class "row" ] [ div [ class "col" ] header ]
+                , div [ class "row" ] [ div [ class "col" ] content ]
+                , hr [] []
+                , div [ class "row" ] [ div [ class "col" ] debug ]
                 ]
             ]
 

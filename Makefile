@@ -1,7 +1,7 @@
 all: trappist0
 
 trappist0: *.elm
-	elm-make --warn Main.elm
+	elm-make Main.elm --warn --output elm.js
 
 test: all
 	$(MAKE) -C t
