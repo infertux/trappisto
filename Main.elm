@@ -6,8 +6,8 @@ import Html.Attributes exposing (width, height, style)
 import Keyboard
 import Mouse
 import Task exposing (Task)
-import Date exposing (Date)
 import Time exposing (Time)
+import Lib.TimeExtra as TimeExtra
 import Window
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -82,15 +82,6 @@ init =
         ( model, Cmd.batch [ msg, Task.perform Resize Window.size ] )
 
 
-
--- ( initialModel
---   -- , Cmd.batch
---   --     [ Task.perform Resize Window.size
---   --     , Task.perform Foo Cmd.none
---   --     ]
--- )
-
-
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
@@ -99,9 +90,37 @@ subscriptions _ =
         , Keyboard.ups (KeyChange False)
         , Mouse.moves MouseMove
         , Window.resizes Resize
-        , Time.every (Time.second * 5) Tick
+        , Time.every (Time.second * 30) Tick
         , jsEvents JsMsg
         ]
+
+
+fetchAddress : String -> Model -> ( Model, Cmd Msg )
+fetchAddress address model =
+    ( model, Cmd.none )
+
+
+fetchBlockByHash : String -> Model -> ( Model, Cmd Msg )
+fetchBlockByHash hash model =
+    let
+        ( updatedModel, cmd ) =
+            Block.update (Block.FetchByHash hash) model.blockModel
+    in
+        ( { model | blockModel = updatedModel }, Cmd.map BlockMsg cmd )
+
+
+fetchBlockByHeight : Int -> Model -> ( Model, Cmd Msg )
+fetchBlockByHeight height model =
+    let
+        ( updatedModel, cmd ) =
+            Block.update (Block.FetchByHeight height) model.blockModel
+    in
+        ( { model | blockModel = updatedModel }, Cmd.map BlockMsg cmd )
+
+
+fetchTransaction : String -> Model -> ( Model, Cmd Msg )
+fetchTransaction transaction model =
+    ( model, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -125,6 +144,8 @@ update action model =
             let
                 ( updatedModel, cmd ) =
                     Status.update statusMsg model.statusModel
+
+                -- FIXME: handle JSON decoding failures
             in
                 ( { model | statusModel = updatedModel }, Cmd.map StatusMsg cmd )
 
@@ -132,11 +153,45 @@ update action model =
             let
                 ( updatedModel, cmd ) =
                     Block.update blockMsg model.blockModel
+
+                -- FIXME: handle JSON decoding failures
             in
                 ( { model | blockModel = updatedModel }, Cmd.map BlockMsg cmd )
 
         Query query ->
-            ( model, Cmd.none )
+            let
+                possibleAddress query =
+                    String.length query == 64
+
+                possibleBlockHash query =
+                    String.length query == 64
+
+                possibleBlockHeight query =
+                    case String.toInt query of
+                        Ok int ->
+                            True
+
+                        Err _ ->
+                            False
+
+                possibleTransaction query =
+                    String.length query /= 64 && String.left 2 query == "Ds"
+
+                updatedModel =
+                    { model | query = query }
+            in
+                if query == "" then
+                    fetchAddress query updatedModel
+                else if possibleTransaction query then
+                    fetchTransaction query updatedModel
+                else if possibleBlockHash query then
+                    fetchBlockByHash query updatedModel
+                else if possibleBlockHeight query then
+                    fetchBlockByHeight (String.toInt query |> Result.toMaybe |> Maybe.withDefault -1) updatedModel
+                else if possibleAddress query then
+                    fetchAddress query updatedModel
+                else
+                    Debug.crash query
 
         JsMsg _ ->
             ( model, Cmd.none )
@@ -166,12 +221,10 @@ keyHandler bool keyCode keys =
         39 ->
             { keys | right = bool }
 
-        38 ->
-            { keys | up = bool }
-
-        40 ->
-            { keys | down = bool }
-
+        -- 38 ->
+        --     { keys | j = bool }
+        -- 40 ->
+        --     { keys | k = bool }
         33 ->
             { keys | pgup = bool }
 
@@ -199,13 +252,18 @@ move { left, right, up, down, space, pgup, pgdown } model =
         model
 
 
+isFetching : Model -> Bool
+isFetching model =
+    model.statusModel.fetching || model.blockModel.fetching
+
+
 searchBar : Model -> Html Msg
 searchBar model =
-    div [ class "col" ]
+    div [ class "col-6 offset-3" ]
         [ input
             [ name "query"
-            , placeholder "Block, transaction, etc."
-            , class "search form-control"
+            , placeholder "Search for blocks, transactions, addresses, particles, etc."
+            , class "form-control form-control-lg text-center mt-2 mb-4"
             , onInput Query
             , value model.query
             ]
@@ -218,31 +276,63 @@ statusView model =
     Html.map StatusMsg (Status.view model.statusModel)
 
 
+blockView : Model -> Html Msg
+blockView model =
+    Html.map BlockMsg (Block.view model.blockModel)
+
+
 view : Model -> Html Msg
 view model =
     let
         window =
             model.window
 
+        glow =
+            if isFetching model then
+                "glow"
+            else
+                ""
+
         header =
             [ div [ class "row" ]
                 [ div [ class "col" ]
-                    [ pre []
+                    [ pre [ id "logo", class glow ]
                         [ text " ______   _______  _______  _______  _______  ______  \n(  __  \\ (  ____ \\(  ____ \\(  ____ )(  ____ \\(  __  \\ \n| (  \\  )| (    \\/| (    \\/| (    )|| (    \\/| (  \\  )\n| |   ) || (__    | |      | (____)|| (__    | |   ) |\n| |   | ||  __)   | |      |     __)|  __)   | |   | |\n| |   ) || (      | |      | (\\ (   | (      | |   ) |\n| (__/  )| (____/\\| (____/\\| ) \\ \\__| (____/\\| (__/  )\n(______/ (_______/(_______/|/   \\__/(_______/(______/ \n"
                         ]
                     ]
                 ]
             ]
 
-        content =
-            [ div [ class "row" ]
-                [ searchBar model
-                ]
-            , div [ class "row" ]
-                [ div [ class "col" ] [ text <| toString <| Date.fromTime model.time ]
+        status model =
+            div [ class "row" ]
+                [ div [ class "col" ] [ text <| TimeExtra.toISOString model.time ]
                 , statusView model
                 ]
-            ]
+
+        block model =
+            div [ class "row" ]
+                [ div
+                    [ class "col-6 offset-3" ]
+                    [ blockView model ]
+                ]
+
+        content =
+            case model.query of
+                "" ->
+                    [ div [ class "row" ] [ searchBar model ]
+                    , status model
+                    ]
+
+                "particles" ->
+                    [ div [ class "row" ]
+                        [ div [ class "col" ] [ text "Reticulating splines..." ]
+                        ]
+                    ]
+
+                _ ->
+                    [ div [ class "row" ] [ searchBar model ]
+                    , block model
+                    ]
 
         debug =
             [ div
@@ -256,8 +346,8 @@ view model =
             ]
     in
         div [ class "row" ]
-            [ div [ class "col text-center" ]
-                [ div [ class "row" ] [ div [ class "col" ] header ]
+            [ div [ class "col" ]
+                [ div [ class "row text-center" ] [ div [ class "col" ] header ]
                 , div [ class "row" ] [ div [ class "col" ] content ]
                 , hr [] []
                 , div [ class "row" ] [ div [ class "col" ] debug ]

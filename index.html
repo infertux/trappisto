@@ -29,10 +29,16 @@
         background: #000;
         color: #0F0;
         font-family: monospace;
-        font-size: 2rem;
+        font-size: 1.5rem;
       }
       hr {
         border-color: #FFF;
+      }
+
+      .glow {
+        transition: all 1s;
+        background: orange;
+        box-shadow: 0 0 10px 5px orange;
       }
     </style>
   </head>
@@ -40,13 +46,31 @@
   <script>
     window.onerror = function(msg, url, line) {
       alert('Oops, a JavaScript error occured, please send a screenshot to the website administrator.\nMessage: ' + msg + '\nURL: ' + url + '\nLine: ' + line);
-      return false; 
+      return false;
     };
   </script>
 
-  <div id="elm-app" class="container-fluid">Loading...</div>
+  <div class="container-fluid">
+    <div class="row" style="position:absolute;width:100%;height:100%">
+      <div class="col">
+        <div id="particles-js"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <div id="elm-app">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
 
   <script>
+    particlesJS.load('particles-js', 'particles.json', function() {
+      console.log('callback - particles.js config loaded');
+    });
+
     window.addEventListener('load', () => {
       const elmAppDiv = document.querySelector('#elm-app');
       const elmApp = Elm.Main.embed(elmAppDiv);
@@ -69,6 +93,10 @@
       //     elmUserListApp.ports.jsEvents.send(["UserList.Fetch"]);
       //   }
       // });
+
+      // const logo = document.getElementById('logo');
+      // logo.classList.add('glow');
+      // setTimeout(() => { logo.classList.remove('glow'); }, 1000);
     });
   </script>
   </body>
