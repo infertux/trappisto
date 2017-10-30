@@ -5,12 +5,9 @@ import Html.Attributes exposing (..)
 import Http exposing (Error)
 import Json.Encode
 import Json.Decode
-import Date
 import Time exposing (Time)
-import Lib.DateExtra as DateExtra
 import Lib.TimeExtra as TimeExtra
-import Lib.JsonApiExtra as JsonApiExtra
-import Lib.HtmlAttributesExtra exposing (innerHtml)
+import Lib.JsonRpc
 
 
 type alias Model =
@@ -20,6 +17,7 @@ type alias Model =
     , confirmations : Int
     , size : Int
     , fetching : Bool
+    , error : Maybe String
     }
 
 
@@ -31,6 +29,7 @@ initialModel =
     , confirmations = -1
     , size = -1
     , fetching = False
+    , error = Nothing
     }
 
 
@@ -47,13 +46,14 @@ type Msg
     = FetchByHash String
     | FetchByHeight Int
     | FetchResult (Result Http.Error JsonModel)
+    | GetBlockHashResult (Result Http.Error String)
 
 
 view : Model -> Html a
 view model =
     div
-        [ class "card text-white bg-primary" ]
-        [ h4 [ class "card-header" ] [ text <| "Block " ++ toString model.height ]
+        [ class "card bg-dark" ]
+        [ h5 [ class "card-header" ] [ text <| "Block " ++ model.hash ]
         , div [ class "card-body" ]
             [ p [ class "card-text" ]
                 [ dl [ class "row" ]
@@ -69,6 +69,9 @@ view model =
                     , dd [ class "col-9" ] [ text <| toString model.size ]
                     ]
                 ]
+            ]
+        , div [ class "card-footer" ]
+            [ small [ class "text-muted" ] [ text "More details at https://explorer.dcrdata.org/explorer/block/181605" ]
             ]
         ]
 
@@ -105,6 +108,14 @@ update msg model =
         FetchResult (Err _) ->
             ( { model | fetching = False }, Cmd.none )
 
+        GetBlockHashResult result ->
+            case result of
+                Ok hash ->
+                    ( { model | error = Nothing }, fetchBlockByHash model hash )
+
+                Err error ->
+                    ( { model | error = Just (toString error) }, Cmd.none )
+
 
 fetchBlockByHash : Model -> String -> Cmd Msg
 fetchBlockByHash model hash =
@@ -113,7 +124,7 @@ fetchBlockByHash model hash =
             Json.Encode.list
                 [ Json.Encode.string hash ]
     in
-        JsonApiExtra.post "getblockheader" params FetchResult decodeBlockFetch
+        Lib.JsonRpc.post "getblockheader" params FetchResult decodeGetBlockHeader
 
 
 fetchBlockByHeight : Model -> Int -> Cmd Msg
@@ -123,14 +134,19 @@ fetchBlockByHeight model height =
             Json.Encode.list
                 [ Json.Encode.int height ]
     in
-        JsonApiExtra.post "getblockhash" params FetchResult decodeBlockFetch
+        Lib.JsonRpc.post "getblockhash" params GetBlockHashResult decodeGetBlockHash
 
 
-decodeBlockFetch : Json.Decode.Decoder JsonModel
-decodeBlockFetch =
+decodeGetBlockHeader : Json.Decode.Decoder JsonModel
+decodeGetBlockHeader =
     Json.Decode.map5 JsonModel
         (Json.Decode.at [ "result", "hash" ] Json.Decode.string)
         (Json.Decode.at [ "result", "height" ] Json.Decode.int)
         (Json.Decode.at [ "result", "time" ] Json.Decode.int)
         (Json.Decode.at [ "result", "confirmations" ] Json.Decode.int)
         (Json.Decode.at [ "result", "size" ] Json.Decode.int)
+
+
+decodeGetBlockHash : Json.Decode.Decoder String
+decodeGetBlockHash =
+    Json.Decode.at [ "result" ] Json.Decode.string

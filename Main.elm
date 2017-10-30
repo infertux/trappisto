@@ -161,10 +161,11 @@ update action model =
         Query query ->
             let
                 possibleAddress query =
-                    String.length query == 64
+                    String.length query /= 64 && String.left 2 query == "Ds"
 
+                -- XXX: 00000000
                 possibleBlockHash query =
-                    String.length query == 64
+                    String.length query == 64 && String.left 8 query == "00000000"
 
                 possibleBlockHeight query =
                     case String.toInt query of
@@ -175,7 +176,7 @@ update action model =
                             False
 
                 possibleTransaction query =
-                    String.length query /= 64 && String.left 2 query == "Ds"
+                    String.length query == 64
 
                 updatedModel =
                     { model | query = query }
@@ -261,13 +262,22 @@ searchBar : Model -> Html Msg
 searchBar model =
     div [ class "col-6 offset-3" ]
         [ input
-            [ name "query"
+            [ id "query"
+            , name "query"
             , placeholder "Search for blocks, transactions, addresses, particles, etc."
             , class "form-control form-control-lg text-center mt-2 mb-4"
             , onInput Query
             , value model.query
             ]
             []
+        ]
+
+
+notification : Model -> Html Msg
+notification model =
+    div [ class "row" ]
+        [ div [ class "col" ]
+            [ text (Maybe.withDefault "" model.blockModel.error) ]
         ]
 
 
@@ -320,6 +330,7 @@ view model =
             case model.query of
                 "" ->
                     [ div [ class "row" ] [ searchBar model ]
+                    , notification model
                     , status model
                     ]
 
@@ -331,6 +342,7 @@ view model =
 
                 _ ->
                     [ div [ class "row" ] [ searchBar model ]
+                    , notification model
                     , block model
                     ]
 
@@ -345,7 +357,7 @@ view model =
                 [ text <| toString model ]
             ]
     in
-        div [ class "row" ]
+        div [ class "row text-white" ]
             [ div [ class "col" ]
                 [ div [ class "row text-center" ] [ div [ class "col" ] header ]
                 , div [ class "row" ] [ div [ class "col" ] content ]

@@ -5,7 +5,7 @@ import Html.Attributes exposing (..)
 import Http exposing (Error)
 import Json.Encode
 import Json.Decode
-import Lib.JsonApiExtra as JsonApiExtra
+import Lib.JsonRpc
 
 
 type alias Model =
@@ -73,7 +73,7 @@ fetchStatus model =
         params =
             Json.Encode.list []
     in
-        JsonApiExtra.post "getinfo" params FetchResult decodeStatusFetch
+        Lib.JsonRpc.post "getinfo" params FetchResult decodeStatusFetch
 
 
 decodeStatusFetch : Json.Decode.Decoder JsonModel

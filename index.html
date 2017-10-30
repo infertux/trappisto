@@ -26,13 +26,16 @@
 
     <style>
       body {
-        background: #000;
-        color: #0F0;
         font-family: monospace;
         font-size: 1.5rem;
       }
+
       hr {
         border-color: #FFF;
+      }
+
+      .bg-black {
+        background-color: #000;
       }
 
       .glow {
@@ -42,7 +45,7 @@
       }
     </style>
   </head>
-  <body>
+  <body class="bg-black text-white">
   <script>
     window.onerror = function(msg, url, line) {
       alert('Oops, a JavaScript error occured, please send a screenshot to the website administrator.\nMessage: ' + msg + '\nURL: ' + url + '\nLine: ' + line);
@@ -83,7 +86,7 @@
       window.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && (String.fromCharCode(e.which).toLowerCase() === 'f')) {
           e.preventDefault();
-          document.querySelector("input.search:first").get(0).select();
+          document.querySelector('#query').select();
         }
       });
 
