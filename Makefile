@@ -1,13 +1,13 @@
-all: trappist0
+all: trappisto
 
-trappist0: *.elm
-	elm-make Main.elm --warn --output elm.js
+trappisto: src/*.elm
+	elm-make src/Trappisto.elm --warn --output public/elm.js
 
 test: all
-	$(MAKE) -C t
+	elm-test # TODO
 
-nginx:
-	nginx -c nginx.conf -p . -g 'daemon off;'
+nginx: nginx/nginx.conf
+	nginx -c nginx/nginx.conf -p . -g 'daemon off;'
 
 clean:
-	$(RM) index.html
+	$(RM) public/elm.js

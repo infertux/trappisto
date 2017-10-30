@@ -1,8 +1,0 @@
-echo '{"op":"unconfirmed_sub"}' | wscat --connect wss://ws.blockchain.info/inv
-
-demo scene
-https://www.youtube.com/watch?v=jr3XJr4FCYk
-
-https://github.com/elm-community/webgl
-https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_model_view_projection
-https://www.shadertoy.com/view/4dfGzs

@@ -1,4 +1,4 @@
-module Block exposing (..)
+module Components.Block exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -45,7 +45,7 @@ type alias JsonModel =
 type Msg
     = FetchByHash String
     | FetchByHeight Int
-    | FetchResult (Result Http.Error JsonModel)
+    | GetBlockHeaderResult (Result Http.Error JsonModel)
     | GetBlockHashResult (Result Http.Error String)
 
 
@@ -71,7 +71,13 @@ view model =
                 ]
             ]
         , div [ class "card-footer" ]
-            [ small [ class "text-muted" ] [ text "More details at https://explorer.dcrdata.org/explorer/block/181605" ]
+            [ small [ class "text-muted" ]
+                [ a
+                    [ target "_blank"
+                    , href <| "https://explorer.dcrdata.org/explorer/block/" ++ model.hash
+                    ]
+                    [ text "More details at dcrdata.org" ]
+                ]
             ]
         ]
 
@@ -93,20 +99,25 @@ update msg model =
             in
                 ( updatedModel, fetchBlockByHeight updatedModel height )
 
-        FetchResult (Ok jsonModel) ->
-            ( { model
-                | height = jsonModel.height
-                , hash = jsonModel.hash
-                , time = Time.second * (toFloat jsonModel.time)
-                , confirmations = jsonModel.confirmations
-                , size = jsonModel.size
-                , fetching = False
-              }
-            , Cmd.none
-            )
+        GetBlockHeaderResult result ->
+            case result of
+                Ok jsonModel ->
+                    ( { model
+                        | height = jsonModel.height
+                        , hash = jsonModel.hash
+                        , time = Time.second * (toFloat jsonModel.time)
+                        , confirmations = jsonModel.confirmations
+                        , size = jsonModel.size
+                        , fetching = False
+                        , error = Nothing
+                      }
+                    , Cmd.none
+                    )
 
-        FetchResult (Err _) ->
-            ( { model | fetching = False }, Cmd.none )
+                Err error ->
+                    ( { model | error = parseError error, fetching = False }
+                    , Cmd.none
+                    )
 
         GetBlockHashResult result ->
             case result of
@@ -114,7 +125,19 @@ update msg model =
                     ( { model | error = Nothing }, fetchBlockByHash model hash )
 
                 Err error ->
-                    ( { model | error = Just (toString error) }, Cmd.none )
+                    ( { model | error = parseError error, fetching = False }
+                    , Cmd.none
+                    )
+
+
+parseError : Error -> Maybe String
+parseError error =
+    case error of
+        Http.BadStatus response ->
+            Just ("Backend error " ++ toString response.status.code ++ response.status.message)
+
+        error ->
+            Just (toString error)
 
 
 fetchBlockByHash : Model -> String -> Cmd Msg
@@ -124,7 +147,7 @@ fetchBlockByHash model hash =
             Json.Encode.list
                 [ Json.Encode.string hash ]
     in
-        Lib.JsonRpc.post "getblockheader" params FetchResult decodeGetBlockHeader
+        Lib.JsonRpc.post "getblockheader" params GetBlockHeaderResult decodeGetBlockHeader
 
 
 fetchBlockByHeight : Model -> Int -> Cmd Msg

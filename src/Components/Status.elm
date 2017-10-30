@@ -1,4 +1,4 @@
-module Status exposing (..)
+module Components.Status exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -12,6 +12,7 @@ type alias Model =
     { blocks : Int
     , connections : Int
     , fetching : Bool
+    , error : Maybe String
     }
 
 
@@ -20,6 +21,7 @@ initialModel =
     { blocks = -1
     , connections = -1
     , fetching = False
+    , error = Nothing
     }
 
 
@@ -59,11 +61,13 @@ update msg model =
                 | blocks = jsonModel.blocks
                 , connections = jsonModel.connections
                 , fetching = False
+                , error = Nothing
               }
             , Cmd.none
             )
 
         FetchResult (Err _) ->
+            -- FIXME: set error
             ( { model | fetching = False }, Cmd.none )
 
 
