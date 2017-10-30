@@ -46,17 +46,37 @@ errorView model =
 
 searchView : Model -> Html Msg
 searchView model =
-    div [ class "col-6 offset-3" ]
-        [ input
-            [ id "query"
-            , name "query"
-            , placeholder "Search for blocks, transactions, addresses, particles, etc."
-            , class "form-control form-control-lg text-center mt-2 mb-4"
-            , onInput Query
-            , value model.query
-            ]
-            []
-        ]
+    let
+        search =
+            div [ class "row" ]
+                [ div [ class "col-6 offset-3" ]
+                    [ input
+                        [ id "query"
+                        , name "query"
+                        , placeholder "Search for blocks, transactions, addresses, particles, etc."
+                        , class "form-control form-control-lg text-center mt-2 mb-4"
+                        , onInput Query
+                        , value model.query
+                        ]
+                        []
+                    ]
+                ]
+
+        vim =
+            div [ class "row" ]
+                [ div [ class "col-6 offset-3" ]
+                    [ div [ class "alert alert-info text-center text-uppercase" ]
+                        [ text "Vim mode engaged! Press \"i\" to go back to Insert mode." ]
+                    ]
+                ]
+
+        view =
+            if model.vimMode then
+                [ search, vim ]
+            else
+                [ search ]
+    in
+        div [ class "row" ] [ div [ class "col" ] view ]
 
 
 statusView : Model -> Html Msg
@@ -113,16 +133,16 @@ view model =
                             ]
                         ]
                     else
-                        [ div [ class "row" ] [ searchView model ]
+                        [ searchView model
                         , errorView model
                         , status model
                         ]
 
                 Block ->
                     if isError model then
-                        [ div [ class "row" ] [ searchView model ], errorView model ]
+                        [ searchView model, errorView model ]
                     else
-                        [ div [ class "row" ] [ searchView model ], block model ]
+                        [ searchView model, block model ]
 
                 _ ->
                     Debug.crash <| toString model.template

@@ -10,10 +10,10 @@ import Components.Status as StatusComponent
 import Components.Block as BlockComponent
 
 
--- port for listening for events from JavaScript
+port elmToJs : String -> Cmd msg
 
 
-port jsEvents : (String -> msg) -> Sub msg
+port jsToElm : (String -> msg) -> Sub msg
 
 
 init : ( Model, Cmd Msg )
@@ -22,7 +22,7 @@ init =
         ( model, msg ) =
             update FetchStatus initialModel
     in
-        ( model, Cmd.batch [ msg, Task.perform Resize Window.size ] )
+        ( model, Cmd.batch [ elmToJs "focus", msg, Task.perform Resize Window.size ] )
 
 
 subscriptions : Model -> Sub Msg
@@ -33,7 +33,7 @@ subscriptions _ =
         , Mouse.moves MouseMove
         , Window.resizes Resize
         , Time.every (Time.second * 60) Tick
-        , jsEvents JsMsg
+        , jsToElm JsMsg
         ]
 
 
@@ -112,8 +112,6 @@ update action model =
             let
                 ( updatedModel, cmd ) =
                     StatusComponent.update statusMsg model.statusModel
-
-                -- FIXME: handle JSON decoding failures
             in
                 ( { model | template = Status, statusModel = updatedModel }, Cmd.map StatusMsg cmd )
 
@@ -121,8 +119,6 @@ update action model =
             let
                 ( updatedModel, cmd ) =
                     BlockComponent.update blockMsg model.blockModel
-
-                -- FIXME: handle JSON decoding failures
             in
                 ( { model | template = Block, blockModel = updatedModel }, Cmd.map BlockMsg cmd )
 
@@ -132,12 +128,23 @@ update action model =
         KeyChange bool code ->
             let
                 keys =
-                    keyHandler bool code model.keys
+                    decodeKeys bool code model.keys
 
                 updatedModel =
-                    { model | keys = keys } |> move keys
+                    { model | keys = keys } |> handleKeys keys
+
+                focus =
+                    model.vimMode && not updatedModel.vimMode
             in
-                update (Query updatedModel.query) updatedModel
+                if focus then
+                    ( { updatedModel
+                        -- don't append "i" when switching back to normal mode
+                        | query = String.dropRight 1 updatedModel.query
+                      }
+                    , elmToJs "focus"
+                    )
+                else
+                    update (Query updatedModel.query) updatedModel
 
         MouseMove position ->
             ( { model | mouse = position }, Cmd.none )
@@ -174,9 +181,15 @@ fetchTransaction transaction model =
     ( model, Cmd.none )
 
 
-keyHandler : Bool -> Keyboard.KeyCode -> Keys -> Keys
-keyHandler bool keyCode keys =
+decodeKeys : Bool -> Keyboard.KeyCode -> Keys -> Keys
+decodeKeys bool keyCode keys =
     case keyCode of
+        27 ->
+            { keys | esc = bool }
+
+        73 ->
+            { keys | i = bool }
+
         74 ->
             { keys | j = bool }
 
@@ -187,26 +200,33 @@ keyHandler bool keyCode keys =
             keys
 
 
-move : Keys -> Model -> Model
-move { j, k } model =
-    case model.template of
-        Block ->
-            if j then
-                case model.blockModel.nextBlockHash of
-                    Just hash ->
-                        { model | query = hash }
+handleKeys : Keys -> Model -> Model
+handleKeys { esc, i, j, k } model =
+    if esc && not model.vimMode then
+        { model | vimMode = True }
+    else if i && model.vimMode then
+        { model | vimMode = False }
+    else if model.vimMode then
+        case model.template of
+            Block ->
+                if j then
+                    case model.blockModel.nextBlockHash of
+                        Just hash ->
+                            { model | query = hash }
 
-                    Nothing ->
-                        model
-            else if k then
-                case model.blockModel.previousBlockHash of
-                    Just hash ->
-                        { model | query = hash }
+                        Nothing ->
+                            model
+                else if k then
+                    case model.blockModel.previousBlockHash of
+                        Just hash ->
+                            { model | query = hash }
 
-                    Nothing ->
-                        model
-            else
+                        Nothing ->
+                            model
+                else
+                    model
+
+            _ ->
                 model
-
-        _ ->
-            model
+    else
+        model

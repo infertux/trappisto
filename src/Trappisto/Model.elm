@@ -23,19 +23,21 @@ type alias Model =
     , blockModel : BlockComponent.Model
     , query : String
     , template : Template
+    , vimMode : Bool
     , time : Time
     }
 
 
 initialModel : Model
 initialModel =
-    { keys = Keys False False
+    { keys = Keys False False False False
     , mouse = Mouse.Position 0 0
     , window = Window.Size 0 0
     , statusModel = StatusComponent.initialModel
     , blockModel = BlockComponent.initialModel
     , query = ""
     , template = Status
+    , vimMode = False
     , time = 0
     }
 
@@ -53,6 +55,8 @@ type Msg
 
 
 type alias Keys =
-    { j : Bool
+    { esc : Bool
+    , i : Bool
+    , j : Bool
     , k : Bool
     }

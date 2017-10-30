@@ -78,11 +78,23 @@
       const elmAppDiv = document.querySelector('#elm-app');
       const elmApp = Elm.Trappisto.embed(elmAppDiv);
 
-      // Prefill search bar with URL query part
-      // const filter = utils.getParameterByName("filter") || "";
-      // elmUserListApp.ports.jsEvents.send(["UserList.Search", filter]);
+      elmApp.ports.elmToJs.subscribe((command) => {
+        console.log('Received command: ' + command);
+
+        switch (command) {
+          case 'focus':
+            const query = document.getElementById('query');
+            query.focus();
+            setTimeout(function () { query.select(); }, 50); // delay sightly to allow focus to "stick" before selecting
+            break;
+
+          default:
+            console.error('Unhandled command: ' + command);
+        }
+      });
 
       // Hook {Ctrl,Cmd}+F to our search bar
+      // XXX: not done in Elm because we cannot call preventDefault() in Elm
       window.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && (String.fromCharCode(e.which).toLowerCase() === 'f')) {
           e.preventDefault();
@@ -90,10 +102,14 @@
         }
       });
 
+      // Prefill search bar with URL query part
+      // const filter = utils.getParameterByName("filter") || "";
+      // elmUserListApp.ports.jsEvents.send(["UserList.Search", filter]);
+
       // Fetch more results when we scroll to the bottom
       // $(window).scroll(function() {
       //   if($(window).scrollTop() + $(window).height() == $(document).height()) {
-      //     elmUserListApp.ports.jsEvents.send(["UserList.Fetch"]);
+      //     elmUserListApp.ports.jsToElm.send(["UserList.Fetch"]);
       //   }
       // });
 
