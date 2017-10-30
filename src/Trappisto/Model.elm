@@ -29,7 +29,7 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    { keys = Keys False False False False False False False
+    { keys = Keys False False
     , mouse = Mouse.Position 0 0
     , window = Window.Size 0 0
     , statusModel = StatusComponent.initialModel
@@ -46,7 +46,6 @@ type Msg
     | JsMsg String
     | Query String
     | KeyChange Bool Keyboard.KeyCode
-    | Animate Time
     | Resize Window.Size
     | MouseMove Mouse.Position
     | Tick Time
@@ -54,11 +53,6 @@ type Msg
 
 
 type alias Keys =
-    { left : Bool
-    , right : Bool
-    , up : Bool
-    , down : Bool
-    , space : Bool
-    , pgup : Bool
-    , pgdown : Bool
+    { j : Bool
+    , k : Bool
     }

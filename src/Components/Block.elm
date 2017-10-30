@@ -16,6 +16,8 @@ type alias Model =
     , time : Time
     , confirmations : Int
     , size : Int
+    , previousBlockHash : Maybe String
+    , nextBlockHash : Maybe String
     , fetching : Bool
     , error : Maybe String
     }
@@ -28,6 +30,8 @@ initialModel =
     , time = -1
     , confirmations = -1
     , size = -1
+    , previousBlockHash = Nothing
+    , nextBlockHash = Nothing
     , fetching = False
     , error = Nothing
     }
@@ -39,6 +43,8 @@ type alias JsonModel =
     , time : Int
     , confirmations : Int
     , size : Int
+    , previousBlockHash : Maybe String
+    , nextBlockHash : Maybe String
     }
 
 
@@ -100,17 +106,31 @@ update msg model =
         GetBlockHeaderResult result ->
             case result of
                 Ok jsonModel ->
-                    ( { model
-                        | height = jsonModel.height
-                        , hash = jsonModel.hash
-                        , time = Time.second * (toFloat jsonModel.time)
-                        , confirmations = jsonModel.confirmations
-                        , size = jsonModel.size
-                        , fetching = False
-                        , error = Nothing
-                      }
-                    , Cmd.none
-                    )
+                    let
+                        previousBlockHash =
+                            case jsonModel.previousBlockHash of
+                                Just hash ->
+                                    if hash /= "0000000000000000000000000000000000000000000000000000000000000000" then
+                                        Just hash
+                                    else
+                                        Nothing
+
+                                Nothing ->
+                                    Nothing
+                    in
+                        ( { model
+                            | height = jsonModel.height
+                            , hash = jsonModel.hash
+                            , time = Time.second * (toFloat jsonModel.time)
+                            , confirmations = jsonModel.confirmations
+                            , size = jsonModel.size
+                            , previousBlockHash = previousBlockHash
+                            , nextBlockHash = jsonModel.nextBlockHash
+                            , fetching = False
+                            , error = Nothing
+                          }
+                        , Cmd.none
+                        )
 
                 Err error ->
                     ( { model
@@ -156,12 +176,14 @@ getBlockHash model height =
 
 decodeGetBlockHeader : Json.Decode.Decoder JsonModel
 decodeGetBlockHeader =
-    Json.Decode.map5 JsonModel
+    Json.Decode.map7 JsonModel
         (Json.Decode.at [ "result", "hash" ] Json.Decode.string)
         (Json.Decode.at [ "result", "height" ] Json.Decode.int)
         (Json.Decode.at [ "result", "time" ] Json.Decode.int)
         (Json.Decode.at [ "result", "confirmations" ] Json.Decode.int)
         (Json.Decode.at [ "result", "size" ] Json.Decode.int)
+        (Json.Decode.maybe <| Json.Decode.at [ "result", "previousblockhash" ] Json.Decode.string)
+        (Json.Decode.maybe <| Json.Decode.at [ "result", "nextblockhash" ] Json.Decode.string)
 
 
 decodeGetBlockHash : Json.Decode.Decoder String

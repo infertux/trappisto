@@ -1,6 +1,5 @@
 port module Trappisto.Update exposing (init, update, subscriptions)
 
-import AnimationFrame
 import Keyboard
 import Mouse
 import Task exposing (Task)
@@ -29,8 +28,7 @@ init =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
-        [ AnimationFrame.diffs Animate
-        , Keyboard.downs (KeyChange True)
+        [ Keyboard.downs (KeyChange True)
         , Keyboard.ups (KeyChange False)
         , Mouse.moves MouseMove
         , Window.resizes Resize
@@ -60,12 +58,15 @@ update action model =
 
         Query query ->
             let
+                genesis =
+                    "298e5cc3d985bfe7f81dc135f360abe089edd4396b86d2de66b0cef42b21d980"
+
                 possibleAddress query =
                     String.length query /= 64 && String.left 2 query == "Ds"
 
-                -- XXX: 00000000
+                -- XXX: Remove a few zeros in the future... 00000000
                 possibleBlockHash query =
-                    String.length query == 64 && String.left 8 query == "00000000"
+                    (String.length query == 64 && String.left 8 query == "00000000") || query == genesis
 
                 possibleBlockHeight query =
                     case String.toInt query of
@@ -129,16 +130,20 @@ update action model =
             ( model, Cmd.none )
 
         KeyChange bool code ->
-            ( { model | keys = keyHandler bool code model.keys }, Cmd.none )
+            let
+                keys =
+                    keyHandler bool code model.keys
+
+                updatedModel =
+                    { model | keys = keys } |> move keys
+            in
+                update (Query updatedModel.query) updatedModel
 
         MouseMove position ->
             ( { model | mouse = position }, Cmd.none )
 
         Resize size ->
             ( { model | window = size }, Cmd.none )
-
-        Animate dt ->
-            ( model |> move model.keys, Cmd.none )
 
 
 fetchAddress : String -> Model -> ( Model, Cmd Msg )
@@ -172,41 +177,36 @@ fetchTransaction transaction model =
 keyHandler : Bool -> Keyboard.KeyCode -> Keys -> Keys
 keyHandler bool keyCode keys =
     case keyCode of
-        32 ->
-            { keys | space = bool }
+        74 ->
+            { keys | j = bool }
 
-        37 ->
-            { keys | left = bool }
-
-        39 ->
-            { keys | right = bool }
-
-        -- 38 ->
-        --     { keys | j = bool }
-        -- 40 ->
-        --     { keys | k = bool }
-        33 ->
-            { keys | pgup = bool }
-
-        34 ->
-            { keys | pgdown = bool }
+        75 ->
+            { keys | k = bool }
 
         _ ->
             keys
 
 
 move : Keys -> Model -> Model
-move { left, right, up, down, space, pgup, pgdown } model =
-    let
-        direction a b =
-            if a == b then
-                0
-            else if a then
-                5
-            else
-                -5
+move { j, k } model =
+    case model.template of
+        Block ->
+            if j then
+                case model.blockModel.nextBlockHash of
+                    Just hash ->
+                        { model | query = hash }
 
-        velocity =
-            direction left right
-    in
-        model
+                    Nothing ->
+                        model
+            else if k then
+                case model.blockModel.previousBlockHash of
+                    Just hash ->
+                        { model | query = hash }
+
+                    Nothing ->
+                        model
+            else
+                model
+
+        _ ->
+            model
