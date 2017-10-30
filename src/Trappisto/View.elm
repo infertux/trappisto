@@ -5,8 +5,8 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Lib.TimeExtra as TimeExtra
 import Trappisto.Model exposing (..)
-import Components.Status as StatusComponent
-import Components.Block as BlockComponent
+import Components.Status as StatusComponent exposing (view)
+import Components.Block as BlockComponent exposing (view)
 
 
 isFetching : Model -> Bool

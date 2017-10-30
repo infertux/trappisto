@@ -7,7 +7,7 @@ import Json.Encode
 import Json.Decode
 import Time exposing (Time)
 import Lib.TimeExtra as TimeExtra
-import Lib.JsonRpc
+import Lib.JsonRpc as JsonRpc
 
 
 type alias Model =
@@ -43,8 +43,8 @@ type alias JsonModel =
 
 
 type Msg
-    = FetchByHash String
-    | FetchByHeight Int
+    = GetBlockHeader String
+    | GetBlockHash Int
     | GetBlockHeaderResult (Result Http.Error JsonModel)
     | GetBlockHashResult (Result Http.Error String)
 
@@ -57,9 +57,7 @@ view model =
         , div [ class "card-body" ]
             [ p [ class "card-text" ]
                 [ dl [ class "row" ]
-                    [ dt [ class "col-3 text-right" ] [ text "hash" ]
-                    , dd [ class "col-9" ] [ text "too long" ]
-                    , dt [ class "col-3 text-right" ] [ text "height" ]
+                    [ dt [ class "col-3 text-right" ] [ text "height" ]
                     , dd [ class "col-9" ] [ text <| toString model.height ]
                     , dt [ class "col-3 text-right" ] [ text "time" ]
                     , dd [ class "col-9" ] [ text <| TimeExtra.toISOString model.time ]
@@ -85,19 +83,19 @@ view model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        FetchByHash hash ->
+        GetBlockHeader hash ->
             let
                 updatedModel =
                     { model | fetching = True }
             in
-                ( updatedModel, fetchBlockByHash updatedModel hash )
+                ( updatedModel, getBlockHeader updatedModel hash )
 
-        FetchByHeight height ->
+        GetBlockHash height ->
             let
                 updatedModel =
                     { model | fetching = True }
             in
-                ( updatedModel, fetchBlockByHeight updatedModel height )
+                ( updatedModel, getBlockHash updatedModel height )
 
         GetBlockHeaderResult result ->
             case result of
@@ -115,49 +113,45 @@ update msg model =
                     )
 
                 Err error ->
-                    ( { model | error = parseError error, fetching = False }
+                    ( { model
+                        | error = JsonRpc.parseError error
+                        , fetching = False
+                      }
                     , Cmd.none
                     )
 
         GetBlockHashResult result ->
             case result of
                 Ok hash ->
-                    ( { model | error = Nothing }, fetchBlockByHash model hash )
+                    ( { model | error = Nothing }, getBlockHeader model hash )
 
                 Err error ->
-                    ( { model | error = parseError error, fetching = False }
+                    ( { model
+                        | error = JsonRpc.parseError error
+                        , fetching = False
+                      }
                     , Cmd.none
                     )
 
 
-parseError : Error -> Maybe String
-parseError error =
-    case error of
-        Http.BadStatus response ->
-            Just ("Backend error " ++ toString response.status.code ++ response.status.message)
-
-        error ->
-            Just (toString error)
-
-
-fetchBlockByHash : Model -> String -> Cmd Msg
-fetchBlockByHash model hash =
+getBlockHeader : Model -> String -> Cmd Msg
+getBlockHeader model hash =
     let
         params =
             Json.Encode.list
                 [ Json.Encode.string hash ]
     in
-        Lib.JsonRpc.post "getblockheader" params GetBlockHeaderResult decodeGetBlockHeader
+        JsonRpc.post "getblockheader" params GetBlockHeaderResult decodeGetBlockHeader
 
 
-fetchBlockByHeight : Model -> Int -> Cmd Msg
-fetchBlockByHeight model height =
+getBlockHash : Model -> Int -> Cmd Msg
+getBlockHash model height =
     let
         params =
             Json.Encode.list
                 [ Json.Encode.int height ]
     in
-        Lib.JsonRpc.post "getblockhash" params GetBlockHashResult decodeGetBlockHash
+        JsonRpc.post "getblockhash" params GetBlockHashResult decodeGetBlockHash
 
 
 decodeGetBlockHeader : Json.Decode.Decoder JsonModel

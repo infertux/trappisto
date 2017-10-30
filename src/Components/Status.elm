@@ -5,7 +5,7 @@ import Html.Attributes exposing (..)
 import Http exposing (Error)
 import Json.Encode
 import Json.Decode
-import Lib.JsonRpc
+import Lib.JsonRpc as JsonRpc
 
 
 type alias Model =
@@ -32,8 +32,8 @@ type alias JsonModel =
 
 
 type Msg
-    = Fetch
-    | FetchResult (Result Http.Error JsonModel)
+    = GetInfo
+    | GetInfoResult (Result Http.Error JsonModel)
 
 
 view : Model -> Html a
@@ -49,35 +49,41 @@ view model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Fetch ->
+        GetInfo ->
             let
                 updatedModel =
                     { model | fetching = True }
             in
-                ( updatedModel, fetchStatus updatedModel )
+                ( updatedModel, getInfo updatedModel )
 
-        FetchResult (Ok jsonModel) ->
-            ( { model
-                | blocks = jsonModel.blocks
-                , connections = jsonModel.connections
-                , fetching = False
-                , error = Nothing
-              }
-            , Cmd.none
-            )
+        GetInfoResult result ->
+            case result of
+                Ok jsonModel ->
+                    ( { model
+                        | blocks = jsonModel.blocks
+                        , connections = jsonModel.connections
+                        , fetching = False
+                        , error = Nothing
+                      }
+                    , Cmd.none
+                    )
 
-        FetchResult (Err _) ->
-            -- FIXME: set error
-            ( { model | fetching = False }, Cmd.none )
+                Err error ->
+                    ( { model
+                        | error = JsonRpc.parseError error
+                        , fetching = False
+                      }
+                    , Cmd.none
+                    )
 
 
-fetchStatus : Model -> Cmd Msg
-fetchStatus model =
+getInfo : Model -> Cmd Msg
+getInfo model =
     let
         params =
             Json.Encode.list []
     in
-        Lib.JsonRpc.post "getinfo" params FetchResult decodeStatusFetch
+        JsonRpc.post "getinfo" params GetInfoResult decodeStatusFetch
 
 
 decodeStatusFetch : Json.Decode.Decoder JsonModel

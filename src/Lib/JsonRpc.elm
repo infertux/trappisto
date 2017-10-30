@@ -1,4 +1,4 @@
-module Lib.JsonRpc exposing (post)
+module Lib.JsonRpc exposing (post, parseError)
 
 import Http
 import Json.Decode
@@ -15,6 +15,34 @@ type alias RequestParams a =
     , timeout : Maybe Time
     , withCredentials : Bool
     }
+
+
+decodeError : String -> String
+decodeError json =
+    let
+        decode =
+            Json.Decode.at [ "error", "message" ] Json.Decode.string
+                |> Json.Decode.decodeString
+    in
+        case decode json of
+            Ok result ->
+                result
+
+            Err err ->
+                "Cannot decode error: " ++ err
+
+
+parseError : Http.Error -> Maybe String
+parseError error =
+    case error of
+        Http.BadStatus response ->
+            Just ("Backend error " ++ toString response.status.code ++ response.status.message)
+
+        Http.BadPayload message response ->
+            Just <| decodeError response.body
+
+        error ->
+            Just (toString error)
 
 
 post : String -> Json.Encode.Value -> (Result Http.Error a -> msg) -> Json.Decode.Decoder a -> Cmd msg

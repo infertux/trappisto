@@ -54,7 +54,7 @@ update action model =
         FetchStatus ->
             let
                 ( updatedModel, cmd ) =
-                    StatusComponent.update StatusComponent.Fetch model.statusModel
+                    StatusComponent.update StatusComponent.GetInfo model.statusModel
             in
                 ( { model | statusModel = updatedModel }, Cmd.map StatusMsg cmd )
 
@@ -150,7 +150,7 @@ fetchBlockByHash : String -> Model -> ( Model, Cmd Msg )
 fetchBlockByHash hash model =
     let
         ( updatedModel, cmd ) =
-            BlockComponent.update (BlockComponent.FetchByHash hash) model.blockModel
+            BlockComponent.update (BlockComponent.GetBlockHeader hash) model.blockModel
     in
         ( { model | blockModel = updatedModel }, Cmd.map BlockMsg cmd )
 
@@ -159,7 +159,7 @@ fetchBlockByHeight : Int -> Model -> ( Model, Cmd Msg )
 fetchBlockByHeight height model =
     let
         ( updatedModel, cmd ) =
-            BlockComponent.update (BlockComponent.FetchByHeight height) model.blockModel
+            BlockComponent.update (BlockComponent.GetBlockHash height) model.blockModel
     in
         ( { model | blockModel = updatedModel }, Cmd.map BlockMsg cmd )
 
