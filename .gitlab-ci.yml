@@ -1,0 +1,17 @@
+image: node:latest
+
+cache:
+  paths:
+    - elm-stuff
+
+before_script:
+  - npm install -g elm
+  - npm install -g uglify-js
+  - elm --version
+  - elm-package install --yes
+
+build:
+  script: make
+
+test:
+  script: make test
