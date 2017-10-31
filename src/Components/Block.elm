@@ -2,7 +2,6 @@ module Components.Block exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (..)
 import Http exposing (Error)
 import Json.Encode as Encode
 import Json.Decode as Decode
@@ -84,19 +83,33 @@ view model =
                     , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
                     , dt [ class "col-3 text-right" ] [ text "ticket price" ]
                     , dd [ class "col-9" ] [ text <| toString model.ticketPrice ++ " DCR" ]
+                    , dt [ class "col-3 text-right" ] [ text "stake transactions" ]
+                    , dd [ class "col-9" ]
+                        ((span [ class "mr-2" ] [ text (toString <| List.length model.tickets) ])
+                            :: (List.map
+                                    (\tx ->
+                                        a
+                                            [ href tx, class "badge badge-secondary ml-1" ]
+                                            [ text <| shortHash tx ]
+                                    )
+                                    model.tickets
+                               )
+                        )
+                    , dt [ class "col-3 text-right" ] [ text "normal transactions" ]
+                    , dd [ class "col-9" ]
+                        ((span [ class "mr-2" ] [ text (toString <| List.length model.transactions) ])
+                            :: (List.map
+                                    (\tx ->
+                                        a
+                                            [ href tx, class "badge badge-light ml-1" ]
+                                            [ text <| shortHash tx ]
+                                    )
+                                    model.transactions
+                               )
+                        )
                     ]
                 ]
             ]
-        , ul [ class "list-group list-group-flush" ] <|
-            List.map
-                (\ticket ->
-                    li [ class "list-group-item bg-dark" ]
-                        [ a
-                            [ href ticket ]
-                            [ text <| "Stake transaction " ++ ticket ]
-                        ]
-                )
-                model.tickets
         , div [ class "card-footer" ]
             [ small [ class "text-muted" ]
                 [ a
@@ -216,3 +229,8 @@ decodeGetBlock =
 decodeGetBlockHash : Decode.Decoder String
 decodeGetBlockHash =
     Decode.at [ "result" ] Decode.string
+
+
+shortHash : String -> String
+shortHash hash =
+    String.concat [ String.left 2 hash, "...", String.right 2 hash ]
