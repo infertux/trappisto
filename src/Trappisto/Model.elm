@@ -1,7 +1,6 @@
 module Trappisto.Model exposing (..)
 
 import Navigation
-import Mouse
 import Window
 import Keyboard
 import Time exposing (Time)
@@ -19,7 +18,6 @@ type Template
 
 type alias Model =
     { keys : Keys
-    , mouse : Mouse.Position
     , window : Window.Size
     , statusModel : StatusComponent.Model
     , blockModel : BlockComponent.Model
@@ -34,7 +32,6 @@ type alias Model =
 initialModel : Model
 initialModel =
     { keys = Keys False False False False
-    , mouse = Mouse.Position 0 0
     , window = Window.Size 0 0
     , statusModel = StatusComponent.initialModel
     , blockModel = BlockComponent.initialModel
@@ -55,7 +52,6 @@ type Msg
     | Query String
     | KeyChange Bool Keyboard.KeyCode
     | Resize Window.Size
-    | MouseMove Mouse.Position
     | Tick Time
     | FetchStatus
 

@@ -56,15 +56,16 @@ modelFromJson jsonModel =
     , confirmations = jsonModel.confirmations
     , blockHash = jsonModel.blockHash
     , time = Maybe.map timestampToTime jsonModel.time
-    , vIn = jsonModel.vIn
-    , vOut = jsonModel.vOut
+    , vIn = List.sortBy .amountIn jsonModel.vIn |> List.reverse
+    , vOut = List.sortBy .value jsonModel.vOut |> List.reverse
     , fetching = False
     , error = Nothing
     }
 
 
 type alias VIn =
-    { txId : String
+    { txId : Maybe String
+    , coinbase : Maybe String
     , amountIn : Float
     , blockHeight : Int
     }
@@ -85,6 +86,21 @@ type alias ScriptPubKey =
 timestampToTime : Int -> Time
 timestampToTime int =
     Time.second * (toFloat int)
+
+
+totalSpent : Model -> Float
+totalSpent model =
+    List.map .amountIn model.vIn |> List.foldr (+) 0
+
+
+dcrAmount : Float -> String
+dcrAmount float =
+    let
+        rounded =
+            -- remove any floating point arithmetic errors
+            float * 1.0e8 |> round |> toFloat |> (flip (/)) 1.0e8
+    in
+        (toString rounded) ++ " DCR"
 
 
 type Msg
@@ -125,6 +141,8 @@ view model =
                         , dd [ class "col-9" ] [ formatBlock model.blockHash ]
                         , dt [ class "col-3 text-right" ] [ text "size" ]
                         , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
+                        , dt [ class "col-3 text-right" ] [ text "total spent" ]
+                        , dd [ class "col-9" ] [ text <| dcrAmount (totalSpent model) ]
                         ]
                     ]
                 ]
@@ -136,7 +154,16 @@ view model =
                         List.map
                             (\vIn ->
                                 li [ class "list-group-item bg-primary" ]
-                                    [ text <| toString vIn.amountIn ]
+                                    [ span [ class "badge badge-info" ]
+                                        [ text
+                                            (if vIn.coinbase /= Nothing then
+                                                "coinbase"
+                                             else
+                                                ""
+                                            )
+                                        ]
+                                    , span [] [ text <| dcrAmount vIn.amountIn ]
+                                    ]
                             )
                             model.vIn
                     ]
@@ -146,7 +173,9 @@ view model =
                         List.map
                             (\vOut ->
                                 li [ class "list-group-item bg-success" ]
-                                    [ text <| toString vOut.value ]
+                                    [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
+                                    , span [] [ text <| dcrAmount vOut.value ]
+                                    ]
                             )
                             model.vOut
                     ]
@@ -211,7 +240,9 @@ decodeGetRawTransaction =
 decodeVIn : Decode.Decoder VIn
 decodeVIn =
     Pipeline.decode VIn
-        |> Pipeline.requiredAt [ "txid" ] Decode.string
+        -- no txid for coinbase txs
+        |> Pipeline.optionalAt [ "txid" ] (Decode.maybe Decode.string) Nothing
+        |> Pipeline.optionalAt [ "coinbase" ] (Decode.maybe Decode.string) Nothing
         |> Pipeline.requiredAt [ "amountin" ] Decode.float
         |> Pipeline.requiredAt [ "blockheight" ] Decode.int
 

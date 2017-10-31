@@ -2,7 +2,6 @@ port module Trappisto.Update exposing (init, update, subscriptions)
 
 import Navigation
 import Keyboard
-import Mouse
 import Task exposing (Task)
 import Time exposing (Time)
 import Window
@@ -44,7 +43,6 @@ subscriptions _ =
     Sub.batch
         [ Keyboard.downs (KeyChange True)
         , Keyboard.ups (KeyChange False)
-        , Mouse.moves MouseMove
         , Window.resizes Resize
         , Time.every (Time.second * 60) Tick
         , jsToElm JsMsg
@@ -172,9 +170,6 @@ update action model =
                     )
                 else
                     update (Query updatedModel.query) updatedModel
-
-        MouseMove position ->
-            ( { model | mouse = position }, Cmd.none )
 
         Resize size ->
             ( { model | window = size }, Cmd.none )
