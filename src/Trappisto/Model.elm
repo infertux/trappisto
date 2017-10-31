@@ -1,5 +1,6 @@
 module Trappisto.Model exposing (..)
 
+import Navigation
 import Mouse
 import Window
 import Keyboard
@@ -43,7 +44,8 @@ initialModel =
 
 
 type Msg
-    = StatusMsg StatusComponent.Msg
+    = NewUrl Navigation.Location
+    | StatusMsg StatusComponent.Msg
     | BlockMsg BlockComponent.Msg
     | JsMsg String
     | Query String

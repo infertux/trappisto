@@ -1,14 +1,14 @@
 module Trappisto exposing (main)
 
-import Html exposing (program)
-import Trappisto.Model exposing (Model, Msg)
+import Navigation
+import Trappisto.Model
 import Trappisto.Update exposing (init, update, subscriptions)
 import Trappisto.View exposing (view)
 
 
-main : Program Never Model Msg
+main : Program Never Trappisto.Model.Model Trappisto.Model.Msg
 main =
-    program
+    Navigation.program Trappisto.Model.NewUrl
         { init = init
         , view = view
         , update = update

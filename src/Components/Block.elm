@@ -2,6 +2,7 @@ module Components.Block exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Http exposing (Error)
 import Json.Encode as Encode
 import Json.Decode as Decode
@@ -90,7 +91,9 @@ view model =
             List.map
                 (\ticket ->
                     li [ class "list-group-item bg-dark" ]
-                        [ a [ href <| "#" ++ ticket ] [ text <| "Stake transaction " ++ ticket ]
+                        [ a
+                            [ href ticket ]
+                            [ text <| "Stake transaction " ++ ticket ]
                         ]
                 )
                 model.tickets

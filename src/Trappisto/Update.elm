@@ -1,5 +1,6 @@
 port module Trappisto.Update exposing (init, update, subscriptions)
 
+import Navigation
 import Keyboard
 import Mouse
 import Task exposing (Task)
@@ -16,13 +17,25 @@ port elmToJs : String -> Cmd msg
 port jsToElm : (String -> msg) -> Sub msg
 
 
-init : ( Model, Cmd Msg )
-init =
+init : Navigation.Location -> ( Model, Cmd Msg )
+init location =
     let
+        query =
+            extractQuery location
+
         ( model, msg ) =
-            update FetchStatus initialModel
+            if String.isEmpty query then
+                update FetchStatus { initialModel | query = query }
+            else
+                update (Query query) { initialModel | query = query }
     in
-        ( model, Cmd.batch [ elmToJs "focus", msg, Task.perform Resize Window.size ] )
+        ( model
+        , Cmd.batch
+            [ elmToJs "focus"
+            , msg
+            , Task.perform Resize Window.size
+            ]
+        )
 
 
 subscriptions : Model -> Sub Msg
@@ -49,6 +62,9 @@ update action model =
             in
                 ( { updatedModel | time = time }, cmd )
 
+        NewUrl location ->
+            ( { model | query = extractQuery location }, Cmd.none )
+
         FetchStatus ->
             let
                 ( updatedModel, cmd ) =
@@ -68,16 +84,14 @@ update action model =
                 possibleBlockHash query =
                     (String.length query == 64 && String.left 8 query == "00000000") || query == genesis
 
-                possibleBlockHeight query =
-                    case String.toInt query of
-                        Ok int ->
-                            True
+                parseBlockHeight string =
+                    String.toInt string |> Result.toMaybe |> Maybe.withDefault -1
 
-                        Err _ ->
-                            False
+                possibleBlockHeight query =
+                    parseBlockHeight query /= -1
 
                 possibleTransaction query =
-                    False
+                    String.length query == 64 && String.left 8 query /= "00000000" && query /= genesis
 
                 statusModel =
                     model.statusModel
@@ -87,17 +101,22 @@ update action model =
 
                 updatedModel =
                     { model | query = query, statusModel = updatedStatusModel }
+
+                updateUrl ( model, cmd ) =
+                    ( model
+                    , Cmd.batch [ newUrl model, cmd ]
+                    )
             in
                 if query == "" then
-                    ( { updatedModel | template = Status }, Cmd.none )
+                    ( { updatedModel | template = Status }, Cmd.none ) |> updateUrl
                 else if possibleTransaction query then
-                    fetchTransaction query updatedModel
+                    fetchTransaction query updatedModel |> updateUrl
                 else if possibleBlockHash query then
-                    fetchBlockByHash query updatedModel
+                    fetchBlockByHash query updatedModel |> updateUrl
                 else if possibleBlockHeight query then
-                    fetchBlockByHeight (String.toInt query |> Result.toMaybe |> Maybe.withDefault -1) updatedModel
+                    fetchBlockByHeight (parseBlockHeight query) updatedModel |> updateUrl
                 else if possibleAddress query then
-                    fetchAddress query updatedModel
+                    fetchAddress query updatedModel |> updateUrl
                 else
                     let
                         statusModel =
@@ -106,7 +125,7 @@ update action model =
                         updatedStatusModel =
                             { statusModel | error = Just "Not sure what you're looking for :|" }
                     in
-                        ( { updatedModel | statusModel = updatedStatusModel }, Cmd.none )
+                        ( { updatedModel | statusModel = updatedStatusModel }, Cmd.none ) |> updateUrl
 
         StatusMsg statusMsg ->
             let
@@ -178,7 +197,7 @@ fetchBlockByHeight height model =
 
 fetchTransaction : String -> Model -> ( Model, Cmd Msg )
 fetchTransaction transaction model =
-    ( model, Cmd.none )
+    fetchBlockByHash transaction model
 
 
 decodeKeys : Bool -> Keyboard.KeyCode -> Keys -> Keys
@@ -230,3 +249,23 @@ handleKeys { esc, i, j, k } model =
                 model
     else
         model
+
+
+extractQuery : Navigation.Location -> String
+extractQuery location =
+    let
+        pathname =
+            String.dropLeft 1 location.pathname
+
+        hash =
+            String.dropLeft 1 location.hash
+    in
+        if String.isEmpty pathname then
+            hash
+        else
+            pathname
+
+
+newUrl : Model -> Cmd Msg
+newUrl model =
+    Navigation.newUrl <| "/#" ++ model.query
