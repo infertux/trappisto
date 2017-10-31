@@ -1,16 +1,16 @@
 module Tests exposing (..)
 
+import Expect exposing (Expectation)
+import Fuzz exposing (Fuzzer, int, list, string)
 import Test exposing (..)
-import Expect
-import Fuzz exposing (list, int, tuple, string)
 import String
 import Json.Decode as Decode
 import Components.Block as Block
 import Components.Transaction as Transaction
 
 
-all : Test
-all =
+suite : Test
+suite =
     describe "Unit tests"
         [ describe "Block"
             [ test "decodeGetBlockHash" <|
