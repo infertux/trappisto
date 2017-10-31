@@ -23,7 +23,7 @@ type alias Model =
 initialModel : Model
 initialModel =
     { hash = ""
-    , size = 0
+    , size = -1
     , confirmations = -1
     , fetching = False
     , error = Nothing
@@ -34,6 +34,16 @@ type alias JsonModel =
     { hash : String
     , hex : String
     , confirmations : Int
+    }
+
+
+modelFromJson : JsonModel -> Model
+modelFromJson jsonModel =
+    { hash = jsonModel.hash
+    , size = (String.length jsonModel.hex) // 2
+    , confirmations = jsonModel.confirmations
+    , fetching = False
+    , error = Nothing
     }
 
 
@@ -82,15 +92,7 @@ update msg model =
         GetRawTransactionResult result ->
             case result of
                 Ok jsonModel ->
-                    ( { model
-                        | hash = jsonModel.hash
-                        , size = (String.length jsonModel.hex) // 2
-                        , confirmations = jsonModel.confirmations
-                        , fetching = False
-                        , error = Nothing
-                      }
-                    , Cmd.none
-                    )
+                    ( modelFromJson jsonModel, Cmd.none )
 
                 Err error ->
                     ( { model
