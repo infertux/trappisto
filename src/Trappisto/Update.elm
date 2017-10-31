@@ -9,6 +9,7 @@ import Window
 import Trappisto.Model exposing (..)
 import Components.Status as StatusComponent
 import Components.Block as BlockComponent
+import Components.Transaction as TransactionComponent
 
 
 port elmToJs : String -> Cmd msg
@@ -141,6 +142,13 @@ update action model =
             in
                 ( { model | template = Block, blockModel = updatedModel }, Cmd.map BlockMsg cmd )
 
+        TransactionMsg transactionMsg ->
+            let
+                ( updatedModel, cmd ) =
+                    TransactionComponent.update transactionMsg model.transactionModel
+            in
+                ( { model | template = Transaction, transactionModel = updatedModel }, Cmd.map TransactionMsg cmd )
+
         JsMsg _ ->
             ( model, Cmd.none )
 
@@ -196,8 +204,12 @@ fetchBlockByHeight height model =
 
 
 fetchTransaction : String -> Model -> ( Model, Cmd Msg )
-fetchTransaction transaction model =
-    fetchBlockByHash transaction model
+fetchTransaction hash model =
+    let
+        ( updatedModel, cmd ) =
+            TransactionComponent.update (TransactionComponent.GetRawTransaction hash) model.transactionModel
+    in
+        ( { model | transactionModel = updatedModel }, Cmd.map TransactionMsg cmd )
 
 
 decodeKeys : Bool -> Keyboard.KeyCode -> Keys -> Keys

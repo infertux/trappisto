@@ -7,6 +7,7 @@ import Lib.TimeExtra as TimeExtra
 import Trappisto.Model exposing (..)
 import Components.Status as StatusComponent exposing (view)
 import Components.Block as BlockComponent exposing (view)
+import Components.Transaction as TransactionComponent exposing (view)
 
 
 isFetching : Model -> Bool
@@ -25,6 +26,8 @@ getError model =
         model.statusModel.error
     else if model.blockModel.error /= Nothing then
         model.blockModel.error
+    else if model.transactionModel.error /= Nothing then
+        model.transactionModel.error
     else
         Nothing
 
@@ -89,6 +92,11 @@ blockView model =
     Html.map BlockMsg (BlockComponent.view model.blockModel)
 
 
+transactionView : Model -> Html Msg
+transactionView model =
+    Html.map TransactionMsg (TransactionComponent.view model.transactionModel)
+
+
 view : Model -> Html Msg
 view model =
     let
@@ -122,11 +130,10 @@ view model =
                 ]
 
         block model =
-            div [ class "row" ]
-                [ div
-                    [ class "col-6 offset-3" ]
-                    [ blockView model ]
-                ]
+            div [ class "row" ] [ div [ class "col-6 offset-3" ] [ blockView model ] ]
+
+        transaction model =
+            div [ class "row" ] [ div [ class "col-6 offset-3" ] [ transactionView model ] ]
 
         content =
             case model.template of
@@ -147,6 +154,12 @@ view model =
                         [ searchView model, errorView model ]
                     else
                         [ searchView model, block model ]
+
+                Transaction ->
+                    if isError model then
+                        [ searchView model, errorView model ]
+                    else
+                        [ searchView model, transaction model ]
 
                 _ ->
                     Debug.crash <| toString model.template
