@@ -27,3 +27,4 @@ toISOString time =
             ++ (String.padLeft 2 '0' (toString minute))
             ++ ":"
             ++ (String.padLeft 2 '0' (toString second))
+            ++ " UTC"

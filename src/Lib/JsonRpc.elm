@@ -29,7 +29,7 @@ decodeError json =
                 result
 
             Err err ->
-                "Cannot decode error: " ++ err
+                "Cannot decode error: " ++ err ++ " | " ++ json
 
 
 parseError : Http.Error -> Maybe String
