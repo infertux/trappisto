@@ -162,7 +162,7 @@ fetchBlockByHash : String -> Model -> ( Model, Cmd Msg )
 fetchBlockByHash hash model =
     let
         ( updatedModel, cmd ) =
-            BlockComponent.update (BlockComponent.GetBlockHeader hash) model.blockModel
+            BlockComponent.update (BlockComponent.GetBlock hash) model.blockModel
     in
         ( { model | blockModel = updatedModel }, Cmd.map BlockMsg cmd )
 

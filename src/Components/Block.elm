@@ -3,8 +3,9 @@ module Components.Block exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http exposing (Error)
-import Json.Encode
-import Json.Decode
+import Json.Encode as Encode
+import Json.Decode as Decode
+import Json.Decode.Pipeline as Pipeline
 import Time exposing (Time)
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
@@ -16,6 +17,9 @@ type alias Model =
     , time : Time
     , confirmations : Int
     , size : Int
+    , ticketPrice : Float
+    , transactions : List String
+    , tickets : List String
     , previousBlockHash : Maybe String
     , nextBlockHash : Maybe String
     , fetching : Bool
@@ -30,6 +34,9 @@ initialModel =
     , time = -1
     , confirmations = -1
     , size = -1
+    , ticketPrice = -1
+    , transactions = []
+    , tickets = []
     , previousBlockHash = Nothing
     , nextBlockHash = Nothing
     , fetching = False
@@ -43,15 +50,18 @@ type alias JsonModel =
     , time : Int
     , confirmations : Int
     , size : Int
+    , ticketPrice : Float
+    , transactions : List String
+    , tickets : List String
     , previousBlockHash : Maybe String
     , nextBlockHash : Maybe String
     }
 
 
 type Msg
-    = GetBlockHeader String
+    = GetBlock String
     | GetBlockHash Int
-    | GetBlockHeaderResult (Result Http.Error JsonModel)
+    | GetBlockResult (Result Http.Error JsonModel)
     | GetBlockHashResult (Result Http.Error String)
 
 
@@ -70,10 +80,20 @@ view model =
                     , dt [ class "col-3 text-right" ] [ text "confirmations" ]
                     , dd [ class "col-9" ] [ text <| toString model.confirmations ]
                     , dt [ class "col-3 text-right" ] [ text "size" ]
-                    , dd [ class "col-9" ] [ text <| toString model.size ]
+                    , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
+                    , dt [ class "col-3 text-right" ] [ text "ticket price" ]
+                    , dd [ class "col-9" ] [ text <| toString model.ticketPrice ++ " DCR" ]
                     ]
                 ]
             ]
+        , ul [ class "list-group list-group-flush" ] <|
+            List.map
+                (\ticket ->
+                    li [ class "list-group-item bg-dark" ]
+                        [ a [ href <| "#" ++ ticket ] [ text <| "Stake transaction " ++ ticket ]
+                        ]
+                )
+                model.tickets
         , div [ class "card-footer" ]
             [ small [ class "text-muted" ]
                 [ a
@@ -89,12 +109,12 @@ view model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GetBlockHeader hash ->
+        GetBlock hash ->
             let
                 updatedModel =
                     { model | fetching = True }
             in
-                ( updatedModel, getBlockHeader updatedModel hash )
+                ( updatedModel, getBlock updatedModel hash )
 
         GetBlockHash height ->
             let
@@ -103,7 +123,7 @@ update msg model =
             in
                 ( updatedModel, getBlockHash updatedModel height )
 
-        GetBlockHeaderResult result ->
+        GetBlockResult result ->
             case result of
                 Ok jsonModel ->
                     let
@@ -124,6 +144,9 @@ update msg model =
                             , time = Time.second * (toFloat jsonModel.time)
                             , confirmations = jsonModel.confirmations
                             , size = jsonModel.size
+                            , ticketPrice = jsonModel.ticketPrice
+                            , transactions = jsonModel.transactions
+                            , tickets = jsonModel.tickets
                             , previousBlockHash = previousBlockHash
                             , nextBlockHash = jsonModel.nextBlockHash
                             , fetching = False
@@ -143,7 +166,7 @@ update msg model =
         GetBlockHashResult result ->
             case result of
                 Ok hash ->
-                    ( { model | error = Nothing }, getBlockHeader model hash )
+                    ( { model | error = Nothing }, getBlock model hash )
 
                 Err error ->
                     ( { model
@@ -154,38 +177,39 @@ update msg model =
                     )
 
 
-getBlockHeader : Model -> String -> Cmd Msg
-getBlockHeader model hash =
+getBlock : Model -> String -> Cmd Msg
+getBlock model hash =
     let
         params =
-            Json.Encode.list
-                [ Json.Encode.string hash ]
+            Encode.list [ Encode.string hash ]
     in
-        JsonRpc.post "getblockheader" params GetBlockHeaderResult decodeGetBlockHeader
+        JsonRpc.post "getblock" params GetBlockResult decodeGetBlock
 
 
 getBlockHash : Model -> Int -> Cmd Msg
 getBlockHash model height =
     let
         params =
-            Json.Encode.list
-                [ Json.Encode.int height ]
+            Encode.list [ Encode.int height ]
     in
         JsonRpc.post "getblockhash" params GetBlockHashResult decodeGetBlockHash
 
 
-decodeGetBlockHeader : Json.Decode.Decoder JsonModel
-decodeGetBlockHeader =
-    Json.Decode.map7 JsonModel
-        (Json.Decode.at [ "result", "hash" ] Json.Decode.string)
-        (Json.Decode.at [ "result", "height" ] Json.Decode.int)
-        (Json.Decode.at [ "result", "time" ] Json.Decode.int)
-        (Json.Decode.at [ "result", "confirmations" ] Json.Decode.int)
-        (Json.Decode.at [ "result", "size" ] Json.Decode.int)
-        (Json.Decode.maybe <| Json.Decode.at [ "result", "previousblockhash" ] Json.Decode.string)
-        (Json.Decode.maybe <| Json.Decode.at [ "result", "nextblockhash" ] Json.Decode.string)
+decodeGetBlock : Decode.Decoder JsonModel
+decodeGetBlock =
+    Pipeline.decode JsonModel
+        |> Pipeline.requiredAt [ "result", "hash" ] Decode.string
+        |> Pipeline.requiredAt [ "result", "height" ] Decode.int
+        |> Pipeline.requiredAt [ "result", "time" ] Decode.int
+        |> Pipeline.requiredAt [ "result", "confirmations" ] Decode.int
+        |> Pipeline.requiredAt [ "result", "size" ] Decode.int
+        |> Pipeline.requiredAt [ "result", "sbits" ] Decode.float
+        |> Pipeline.requiredAt [ "result", "tx" ] (Decode.list Decode.string)
+        |> Pipeline.optionalAt [ "result", "stx" ] (Decode.list Decode.string) []
+        |> Pipeline.optionalAt [ "result", "previousblockhash" ] (Decode.maybe Decode.string) Nothing
+        |> Pipeline.optionalAt [ "result", "nextblockhash" ] (Decode.maybe Decode.string) Nothing
 
 
-decodeGetBlockHash : Json.Decode.Decoder String
+decodeGetBlockHash : Decode.Decoder String
 decodeGetBlockHash =
-    Json.Decode.at [ "result" ] Json.Decode.string
+    Decode.at [ "result" ] Decode.string
