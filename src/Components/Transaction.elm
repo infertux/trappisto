@@ -85,6 +85,7 @@ type alias VOut =
 type alias ScriptPubKey =
     { asm : String
     , type_ : String
+    , addresses : List String
     }
 
 
@@ -114,6 +115,13 @@ view model =
 
                 Just hash ->
                     a [ href hash ] [ text hash ]
+
+        formatAddresses scriptPubKey =
+            div [] <|
+                (List.map
+                    (\address -> div [] [ a [ href address ] [ text address ] ])
+                    scriptPubKey.addresses
+                )
     in
         div
             [ class "card bg-dark" ]
@@ -194,6 +202,7 @@ view model =
                                     li [ class "list-group-item bg-secondary" ]
                                         [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
                                         , span [ class "float-right" ] [ text <| dcrAmount vOut.value ]
+                                        , formatAddresses vOut.scriptPubKey
                                         , code [ class "mt-2" ] [ text vOut.scriptPubKey.asm ]
                                         ]
                                 )
@@ -289,6 +298,7 @@ decodeScriptPubKey =
     Pipeline.decode ScriptPubKey
         |> Pipeline.requiredAt [ "asm" ] Decode.string
         |> Pipeline.requiredAt [ "type" ] Decode.string
+        |> Pipeline.optionalAt [ "addresses" ] (Decode.list Decode.string) []
 
 
 
