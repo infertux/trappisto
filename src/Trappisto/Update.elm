@@ -83,69 +83,105 @@ update action model =
                 possibleBlockHash query =
                     (String.length query == 64 && String.left 8 query == "00000000") || query == genesis
 
+                possibleTransaction query =
+                    String.length query == 64 && String.left 8 query /= "00000000" && query /= genesis
+
+                updatedModel =
+                    { model | query = query, error = Nothing }
+            in
+                if query == "" then
+                    ( { updatedModel | template = Status }
+                    , Cmd.none
+                    )
+                        |> updateUrl
+                else if possibleTransaction query then
+                    fetchTransaction query updatedModel
+                else if possibleBlockHash query then
+                    fetchBlockByHash query updatedModel
+                else if possibleAddress query then
+                    fetchAddress query updatedModel
+                else
+                    ( { updatedModel
+                        | template = Status
+                        , error = Just "Not sure what you're looking for :|"
+                      }
+                    , Cmd.none
+                    )
+                        |> updateUrl
+
+        QueryForce query ->
+            let
                 parseBlockHeight string =
                     String.toInt string |> Result.toMaybe |> Maybe.withDefault -1
 
                 possibleBlockHeight query =
                     parseBlockHeight query /= -1
 
-                possibleTransaction query =
-                    String.length query == 64 && String.left 8 query /= "00000000" && query /= genesis
-
-                statusModel =
-                    model.statusModel
-
-                updatedStatusModel =
-                    { statusModel | error = Nothing }
-
                 updatedModel =
-                    { model | query = query, statusModel = updatedStatusModel }
-
-                updateUrl ( model, cmd ) =
-                    ( model
-                    , Cmd.batch [ newUrl model, cmd ]
-                    )
+                    { model | query = query, error = Nothing }
             in
-                if query == "" then
-                    ( { updatedModel | template = Status }, Cmd.none ) |> updateUrl
-                else if possibleTransaction query then
-                    fetchTransaction query updatedModel |> updateUrl
-                else if possibleBlockHash query then
-                    fetchBlockByHash query updatedModel |> updateUrl
-                else if possibleBlockHeight query then
-                    fetchBlockByHeight (parseBlockHeight query) updatedModel |> updateUrl
-                else if possibleAddress query then
-                    fetchAddress query updatedModel |> updateUrl
+                if possibleBlockHeight query then
+                    fetchBlockByHeight (parseBlockHeight query) updatedModel
                 else
-                    let
-                        statusModel =
-                            updatedModel.statusModel
-
-                        updatedStatusModel =
-                            { statusModel | error = Just "Not sure what you're looking for :|" }
-                    in
-                        ( { updatedModel | statusModel = updatedStatusModel }, Cmd.none ) |> updateUrl
+                    ( { updatedModel
+                        | template = Status
+                        , error = Just "Not sure what you're looking for :|"
+                      }
+                    , Cmd.none
+                    )
+                        |> updateUrl
 
         StatusMsg statusMsg ->
             let
                 ( updatedModel, cmd ) =
                     StatusComponent.update statusMsg model.statusModel
             in
-                ( { model | template = Status, statusModel = updatedModel }, Cmd.map StatusMsg cmd )
+                ( { model
+                    | template = Status
+                    , statusModel = updatedModel
+                  }
+                , Cmd.map StatusMsg cmd
+                )
+                    |> updateUrl
 
         BlockMsg blockMsg ->
             let
                 ( updatedModel, cmd ) =
                     BlockComponent.update blockMsg model.blockModel
+
+                query =
+                    case blockMsg of
+                        BlockComponent.GetBlock foo ->
+                            updatedModel.hash
+
+                        BlockComponent.GetBlockHash foo ->
+                            toString updatedModel.height
+
+                        _ ->
+                            model.query
             in
-                ( { model | template = Block, blockModel = updatedModel }, Cmd.map BlockMsg cmd )
+                ( { model
+                    | template = Block
+                    , query = query
+                    , blockModel = updatedModel
+                  }
+                , Cmd.map BlockMsg cmd
+                )
+                    |> updateUrl
 
         TransactionMsg transactionMsg ->
             let
                 ( updatedModel, cmd ) =
                     TransactionComponent.update transactionMsg model.transactionModel
             in
-                ( { model | template = Transaction, transactionModel = updatedModel }, Cmd.map TransactionMsg cmd )
+                ( { model
+                    | template = Transaction
+                    , query = updatedModel.hash
+                    , transactionModel = updatedModel
+                  }
+                , Cmd.map TransactionMsg cmd
+                )
+                    |> updateUrl
 
         JsMsg _ ->
             ( model, Cmd.none )
@@ -168,8 +204,12 @@ update action model =
                       }
                     , elmToJs "focus"
                     )
-                else
+                else if updatedModel.query /= model.query then
                     update (Query updatedModel.query) updatedModel
+                else if keys.enter then
+                    update (QueryForce updatedModel.query) updatedModel
+                else
+                    ( updatedModel, Cmd.none )
 
         Resize size ->
             ( { model | window = size }, Cmd.none )
@@ -182,36 +222,30 @@ fetchAddress address model =
 
 fetchBlockByHash : String -> Model -> ( Model, Cmd Msg )
 fetchBlockByHash hash model =
-    let
-        ( updatedModel, cmd ) =
-            BlockComponent.update (BlockComponent.GetBlock hash) model.blockModel
-    in
-        ( { model | blockModel = updatedModel }, Cmd.map BlockMsg cmd )
+    update (BlockMsg (BlockComponent.GetBlock hash)) model
 
 
 fetchBlockByHeight : Int -> Model -> ( Model, Cmd Msg )
 fetchBlockByHeight height model =
-    let
-        ( updatedModel, cmd ) =
-            BlockComponent.update (BlockComponent.GetBlockHash height) model.blockModel
-    in
-        ( { model | blockModel = updatedModel }, Cmd.map BlockMsg cmd )
+    update (BlockMsg (BlockComponent.GetBlockHash height)) model
 
 
 fetchTransaction : String -> Model -> ( Model, Cmd Msg )
 fetchTransaction hash model =
-    let
-        ( updatedModel, cmd ) =
-            TransactionComponent.update (TransactionComponent.GetRawTransaction hash) model.transactionModel
-    in
-        ( { model | transactionModel = updatedModel }, Cmd.map TransactionMsg cmd )
+    update (TransactionMsg (TransactionComponent.GetRawTransaction hash)) model
 
 
 decodeKeys : Bool -> Keyboard.KeyCode -> Keys -> Keys
 decodeKeys bool keyCode keys =
     case keyCode of
+        13 ->
+            { keys | enter = bool }
+
         27 ->
             { keys | esc = bool }
+
+        68 ->
+            { keys | d = bool }
 
         73 ->
             { keys | i = bool }
@@ -227,8 +261,10 @@ decodeKeys bool keyCode keys =
 
 
 handleKeys : Keys -> Model -> Model
-handleKeys { esc, i, j, k } model =
-    if esc && not model.vimMode then
+handleKeys { esc, d, i, j, k } model =
+    if d then
+        { model | debug = not model.debug }
+    else if esc && not model.vimMode then
         { model | vimMode = True }
     else if i && model.vimMode then
         { model | vimMode = False }
@@ -276,3 +312,8 @@ extractQuery location =
 newUrl : Model -> Cmd Msg
 newUrl model =
     Navigation.newUrl <| "/#" ++ model.query
+
+
+updateUrl : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+updateUrl ( model, cmd ) =
+    ( model, Cmd.batch [ newUrl model, cmd ] )

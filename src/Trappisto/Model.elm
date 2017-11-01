@@ -24,21 +24,25 @@ type alias Model =
     , transactionModel : TransactionComponent.Model
     , query : String
     , template : Template
+    , error : Maybe String
     , vimMode : Bool
+    , debug : Bool
     , time : Time
     }
 
 
 initialModel : Model
 initialModel =
-    { keys = Keys False False False False
+    { keys = Keys False False False False False False
     , window = Window.Size 0 0
     , statusModel = StatusComponent.initialModel
     , blockModel = BlockComponent.initialModel
     , transactionModel = TransactionComponent.initialModel
     , query = ""
     , template = Status
+    , error = Nothing
     , vimMode = False
+    , debug = False
     , time = 0
     }
 
@@ -50,6 +54,7 @@ type Msg
     | TransactionMsg TransactionComponent.Msg
     | JsMsg String
     | Query String
+    | QueryForce String
     | KeyChange Bool Keyboard.KeyCode
     | Resize Window.Size
     | Tick Time
@@ -57,7 +62,9 @@ type Msg
 
 
 type alias Keys =
-    { esc : Bool
+    { enter : Bool
+    , esc : Bool
+    , d : Bool
     , i : Bool
     , j : Bool
     , k : Bool

@@ -38,11 +38,9 @@ type Msg
 
 view : Model -> Html a
 view model =
-    div [ class "col" ]
-        [ ul [ class "list-unstyled" ]
-            [ li [] [ text <| "Blocks: " ++ toString model.blocks ]
-            , li [] [ text <| "Connections: " ++ toString model.connections ]
-            ]
+    div [ class "col text-center" ]
+        [ span [] [ text "Last block: " ]
+        , a [ href (toString model.blocks) ] [ text <| toString model.blocks ]
         ]
 
 

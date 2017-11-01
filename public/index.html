@@ -20,6 +20,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/favicon/apple-touch-icon.png">
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+    <link rel="stylesheet" href="assets/open-iconic/font/css/open-iconic-bootstrap.css">
 
     <script src="assets/js/elm.min.js" async defer></script>
 
@@ -40,6 +41,12 @@
 
       hr {
         border-color: #FFF;
+      }
+
+      code {
+        display: block;
+        font-size: 50%;
+        word-break: break-all;
       }
 
       .bg-black {
@@ -92,8 +99,10 @@
         switch (command) {
           case 'focus':
             const query = document.getElementById('query');
-            query.focus();
-            setTimeout(function () { query.select(); }, 50); // delay sightly to allow focus to "stick" before selecting
+            if (query) {
+              query.focus();
+              setTimeout(function () { query.select(); }, 50); // delay sightly to allow focus to "stick" before selecting
+            }
             break;
 
           default:

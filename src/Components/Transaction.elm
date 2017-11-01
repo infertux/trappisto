@@ -9,6 +9,7 @@ import Json.Decode.Pipeline as Pipeline
 import Time exposing (Time)
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
+import Lib.Decred as Decred
 
 
 type alias Model =
@@ -93,6 +94,20 @@ totalSpent model =
     List.map .amountIn model.vIn |> List.foldr (+) 0
 
 
+fee : Model -> Float
+fee model =
+    let
+        totalOut =
+            List.map .value model.vOut |> List.foldr (+) 0
+    in
+        totalSpent model - totalOut
+
+
+feePerKb : Model -> Float
+feePerKb model =
+    fee model * 1.0e3 / toFloat model.size
+
+
 dcrAmount : Float -> String
 dcrAmount float =
     let
@@ -129,7 +144,16 @@ view model =
     in
         div
             [ class "card bg-dark" ]
-            [ h5 [ class "card-header" ] [ text <| "Transaction " ++ model.hash ]
+            [ h5 [ class "card-header" ]
+                [ span [] [ text <| "Transaction " ++ model.hash ]
+                , a
+                    [ class "float-right"
+                    , target "_blank"
+                    , title "Open on dcrdata.org"
+                    , href <| "https://explorer.dcrdata.org/explorer/tx/" ++ model.hash
+                    ]
+                    [ span [ class "oi oi-external-link" ] [] ]
+                ]
             , div [ class "card-body" ]
                 [ p [ class "card-text" ]
                     [ dl [ class "row" ]
@@ -143,6 +167,12 @@ view model =
                         , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
                         , dt [ class "col-3 text-right" ] [ text "total spent" ]
                         , dd [ class "col-9" ] [ text <| dcrAmount (totalSpent model) ]
+                        , dt [ class "col-3 text-right" ] [ text "fee" ]
+                        , dd [ class "col-9" ]
+                            [ text <|
+                                dcrAmount (fee model)
+                                    ++ (" (" ++ (dcrAmount (feePerKb model)) ++ "/kB)")
+                            ]
                         ]
                     ]
                 ]
@@ -162,7 +192,14 @@ view model =
                                                 ""
                                             )
                                         ]
-                                    , span [] [ text <| dcrAmount vIn.amountIn ]
+                                    , span [ class "float-right" ] [ text <| dcrAmount vIn.amountIn ]
+                                    , (case vIn.txId of
+                                        Just hash ->
+                                            a [ href hash ] [ text <| Decred.shortHash hash ]
+
+                                        Nothing ->
+                                            span [] []
+                                      )
                                     ]
                             )
                             model.vIn
@@ -174,19 +211,11 @@ view model =
                             (\vOut ->
                                 li [ class "list-group-item bg-success" ]
                                     [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
-                                    , span [] [ text <| dcrAmount vOut.value ]
+                                    , span [ class "float-right" ] [ text <| dcrAmount vOut.value ]
+                                    , code [ class "mt-2" ] [ text vOut.scriptPubKey.asm ]
                                     ]
                             )
                             model.vOut
-                    ]
-                ]
-            , div [ class "card-footer" ]
-                [ small [ class "text-muted" ]
-                    [ a
-                        [ target "_blank"
-                        , href <| "https://explorer.dcrdata.org/explorer/tx/" ++ model.hash
-                        ]
-                        [ text "More details at dcrdata.org" ]
                     ]
                 ]
             ]
@@ -237,11 +266,29 @@ decodeGetRawTransaction =
         |> Pipeline.requiredAt [ "result", "vout" ] (Decode.list decodeVOut)
 
 
+zeroToNothing : Maybe String -> Decode.Decoder (Maybe String)
+zeroToNothing maybe =
+    let
+        zero =
+            "0000000000000000000000000000000000000000000000000000000000000000"
+    in
+        Decode.succeed <|
+            case maybe of
+                Just string ->
+                    if string == zero then
+                        Nothing
+                    else
+                        maybe
+
+                Nothing ->
+                    maybe
+
+
 decodeVIn : Decode.Decoder VIn
 decodeVIn =
     Pipeline.decode VIn
         -- no txid for coinbase txs
-        |> Pipeline.optionalAt [ "txid" ] (Decode.maybe Decode.string) Nothing
+        |> Pipeline.optionalAt [ "txid" ] (Decode.maybe Decode.string |> Decode.andThen zeroToNothing) Nothing
         |> Pipeline.optionalAt [ "coinbase" ] (Decode.maybe Decode.string) Nothing
         |> Pipeline.requiredAt [ "amountin" ] Decode.float
         |> Pipeline.requiredAt [ "blockheight" ] Decode.int

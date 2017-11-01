@@ -2,6 +2,7 @@ module Components.Block exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Http exposing (Error)
 import Json.Encode as Encode
 import Json.Decode as Decode
@@ -9,6 +10,7 @@ import Json.Decode.Pipeline as Pipeline
 import Time exposing (Time)
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
+import Lib.Decred as Decred
 
 
 type alias Model =
@@ -65,58 +67,70 @@ type Msg
     | GetBlockHashResult (Result Http.Error String)
 
 
-view : Model -> Html a
+view : Model -> Html Msg
 view model =
-    div
-        [ class "card bg-dark" ]
-        [ h5 [ class "card-header" ] [ text <| "Block " ++ model.hash ]
-        , div [ class "card-body" ]
-            [ p [ class "card-text" ]
-                [ dl [ class "row" ]
-                    [ dt [ class "col-3 text-right" ] [ text "height" ]
-                    , dd [ class "col-9" ] [ text <| toString model.height ]
-                    , dt [ class "col-3 text-right" ] [ text "time" ]
-                    , dd [ class "col-9" ] [ text <| TimeExtra.toISOString model.time ]
-                    , dt [ class "col-3 text-right" ] [ text "confirmations" ]
-                    , dd [ class "col-9" ] [ text <| toString model.confirmations ]
-                    , dt [ class "col-3 text-right" ] [ text "size" ]
-                    , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
-                    , dt [ class "col-3 text-right" ] [ text "ticket price" ]
-                    , dd [ class "col-9" ] [ text <| toString model.ticketPrice ++ " DCR" ]
-                    , dt [ class "col-3 text-right" ] [ text "stake transactions" ]
-                    , dd [ class "col-9" ]
-                        ((span [ class "mr-2" ] [ text (toString <| List.length model.tickets) ])
-                            :: (List.map
-                                    (\tx ->
-                                        a
-                                            [ href tx, class "badge badge-secondary ml-1" ]
-                                            [ text <| shortHash tx ]
-                                    )
-                                    model.tickets
-                               )
-                        )
-                    , dt [ class "col-3 text-right" ] [ text "normal transactions" ]
-                    , dd [ class "col-9" ]
-                        ((span [ class "mr-2" ] [ text (toString <| List.length model.transactions) ])
-                            :: (List.map
-                                    (\tx ->
-                                        a
-                                            [ href tx, class "badge badge-light ml-1" ]
-                                            [ text <| shortHash tx ]
-                                    )
-                                    model.transactions
-                               )
-                        )
-                    ]
+    div [ class "row align-items-center" ]
+        [ div [ class "col-3 text-right" ]
+            [ a
+                [ class "btn btn-secondary"
+                , href "javascript:void(0)"
+                , onClick (GetBlock "000000000000006fa9bf10d4a39d0cbc6ef8dc2f2db3e7841fd33b7ad973811a")
                 ]
+                [ text "<" ]
             ]
-        , div [ class "card-footer" ]
-            [ small [ class "text-muted" ]
-                [ a
-                    [ target "_blank"
-                    , href <| "https://explorer.dcrdata.org/explorer/block/" ++ model.hash
+        , div [ class "col-6" ]
+            [ div
+                [ class "card bg-dark" ]
+                [ h5 [ class "card-header" ]
+                    [ span [] [ text <| "Block " ++ model.hash ]
+                    , a
+                        [ class "float-right"
+                        , target "_blank"
+                        , title "Open on dcrdata.org"
+                        , href <| "https://explorer.dcrdata.org/explorer/block/" ++ model.hash
+                        ]
+                        [ span [ class "oi oi-external-link" ] [] ]
                     ]
-                    [ text "More details at dcrdata.org" ]
+                , div [ class "card-body" ]
+                    [ p [ class "card-text" ]
+                        [ dl [ class "row" ]
+                            [ dt [ class "col-3 text-right" ] [ text "height" ]
+                            , dd [ class "col-9" ] [ text <| toString model.height ]
+                            , dt [ class "col-3 text-right" ] [ text "time" ]
+                            , dd [ class "col-9" ] [ text <| TimeExtra.toISOString model.time ]
+                            , dt [ class "col-3 text-right" ] [ text "confirmations" ]
+                            , dd [ class "col-9" ] [ text <| toString model.confirmations ]
+                            , dt [ class "col-3 text-right" ] [ text "size" ]
+                            , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
+                            , dt [ class "col-3 text-right" ] [ text "ticket price" ]
+                            , dd [ class "col-9" ] [ text <| toString model.ticketPrice ++ " DCR" ]
+                            , dt [ class "col-3 text-right" ] [ text "stake transactions" ]
+                            , dd [ class "col-9" ]
+                                ((span [ class "mr-2" ] [ text (toString <| List.length model.tickets) ])
+                                    :: (List.map
+                                            (\tx ->
+                                                a
+                                                    [ href tx, class "badge badge-secondary ml-1" ]
+                                                    [ text <| Decred.shortHash tx ]
+                                            )
+                                            model.tickets
+                                       )
+                                )
+                            , dt [ class "col-3 text-right" ] [ text "normal transactions" ]
+                            , dd [ class "col-9" ]
+                                ((span [ class "mr-2" ] [ text (toString <| List.length model.transactions) ])
+                                    :: (List.map
+                                            (\tx ->
+                                                a
+                                                    [ href tx, class "badge badge-light ml-1" ]
+                                                    [ text <| Decred.shortHash tx ]
+                                            )
+                                            model.transactions
+                                       )
+                                )
+                            ]
+                        ]
+                    ]
                 ]
             ]
         ]
@@ -229,8 +243,3 @@ decodeGetBlock =
 decodeGetBlockHash : Decode.Decoder String
 decodeGetBlockHash =
     Decode.at [ "result" ] Decode.string
-
-
-shortHash : String -> String
-shortHash hash =
-    String.concat [ String.left 2 hash, "...", String.right 2 hash ]

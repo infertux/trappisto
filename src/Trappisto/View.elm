@@ -2,8 +2,7 @@ module Trappisto.View exposing (view)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onInput)
-import Lib.TimeExtra as TimeExtra
+import Html.Events exposing (..)
 import Trappisto.Model exposing (..)
 import Components.Status as StatusComponent exposing (view)
 import Components.Block as BlockComponent exposing (view)
@@ -22,14 +21,22 @@ isError model =
 
 getError : Model -> Maybe String
 getError model =
-    if model.statusModel.error /= Nothing then
-        model.statusModel.error
-    else if model.blockModel.error /= Nothing then
-        model.blockModel.error
-    else if model.transactionModel.error /= Nothing then
-        model.transactionModel.error
+    if model.error /= Nothing then
+        model.error
     else
-        Nothing
+        case model.template of
+            Transaction ->
+                model.transactionModel.error
+
+            -- FIXME:
+            Address ->
+                Nothing
+
+            Block ->
+                model.blockModel.error
+
+            Status ->
+                model.statusModel.error
 
 
 errorView : Model -> Html Msg
@@ -100,9 +107,6 @@ transactionView model =
 view : Model -> Html Msg
 view model =
     let
-        window =
-            model.window
-
         glow =
             if isFetching model then
                 "glow"
@@ -124,62 +128,65 @@ view model =
             ]
 
         status model =
-            div [ class "row" ]
-                [ div [ class "col" ] [ text <| TimeExtra.toISOString model.time ]
-                , statusView model
-                ]
-
-        block model =
-            div [ class "row" ] [ div [ class "col-6 offset-3" ] [ blockView model ] ]
+            div [ class "row" ] [ statusView model ]
 
         transaction model =
             div [ class "row" ] [ div [ class "col-6 offset-3" ] [ transactionView model ] ]
 
         content =
-            case model.template of
-                Status ->
-                    if model.query == "particles" then
-                        [ div [ class "row" ]
-                            [ div [ class "col" ] [ text "Reticulating splines..." ]
+            if model.error /= Nothing then
+                [ searchView model, errorView model ]
+            else
+                case model.template of
+                    Status ->
+                        if model.query == "particles" then
+                            [ div [ class "row" ]
+                                [ div [ class "col" ] [ text "Reticulating splines..." ]
+                                ]
                             ]
-                        ]
-                    else
-                        [ searchView model
-                        , errorView model
-                        , status model
-                        ]
+                        else
+                            [ searchView model, errorView model, status model ]
 
-                Block ->
-                    if isError model then
-                        [ searchView model, errorView model ]
-                    else
-                        [ searchView model, block model ]
+                    Block ->
+                        if isError model then
+                            [ searchView model, errorView model ]
+                        else
+                            [ searchView model, blockView model ]
 
-                Transaction ->
-                    if isError model then
-                        [ searchView model, errorView model ]
-                    else
-                        [ searchView model, transaction model ]
+                    Transaction ->
+                        if isError model then
+                            [ searchView model, errorView model ]
+                        else
+                            [ searchView model, transaction model ]
 
-                _ ->
-                    Debug.crash <| toString model.template
+                    _ ->
+                        Debug.crash <| toString model.template
 
         debug =
-            [ div
-                [ style
-                    [ ( "font-size", "1rem" )
-                    , ( "color", "white" )
-                    , ( "text-align", "center" )
+            [ hr [] []
+            , div [ class "row" ]
+                [ div [ class "col" ]
+                    [ div
+                        [ style
+                            [ ( "font-size", "1rem" )
+                            , ( "color", "white" )
+                            , ( "text-align", "center" )
+                            ]
+                        ]
+                        [ text <| toString model ]
                     ]
                 ]
-                [ text <| toString model ]
             ]
+
+        headerAndContent =
+            [ div [ class "row text-center" ] [ div [ class "col" ] header ]
+            , div [ class "row" ] [ div [ class "col" ] content ]
+            ]
+
+        sections =
+            if model.debug then
+                List.concat [ headerAndContent, debug ]
+            else
+                headerAndContent
     in
-        div [ class "row text-white" ]
-            [ div [ class "col" ]
-                [ div [ class "row text-center" ] [ div [ class "col" ] header ]
-                , div [ class "row" ] [ div [ class "col" ] content ]
-                , hr [] []
-                , div [ class "row" ] [ div [ class "col" ] debug ]
-                ]
-            ]
+        div [ class "row text-white" ] [ div [ class "col" ] sections ]
