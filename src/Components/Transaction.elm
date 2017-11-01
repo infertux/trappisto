@@ -9,11 +9,12 @@ import Json.Decode.Pipeline as Pipeline
 import Time exposing (Time)
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
-import Lib.Decred as Decred
+import Lib.Decred exposing (..)
 
 
 type alias Model =
     { hash : String
+    , type_ : String
     , size : Int
     , confirmations : Int
     , blockHash : Maybe String
@@ -28,12 +29,28 @@ type alias Model =
 initialModel : Model
 initialModel =
     { hash = ""
+    , type_ = "?"
     , size = -1
     , confirmations = -1
     , blockHash = Nothing
     , time = Nothing
     , vIn = []
     , vOut = []
+    , fetching = False
+    , error = Nothing
+    }
+
+
+modelFromJson : JsonModel -> Model
+modelFromJson jsonModel =
+    { hash = jsonModel.hash
+    , type_ = computeType jsonModel
+    , size = computeSize jsonModel
+    , confirmations = jsonModel.confirmations
+    , blockHash = jsonModel.blockHash
+    , time = Maybe.map TimeExtra.timestampToTime jsonModel.time
+    , vIn = List.sortBy .amountIn jsonModel.vIn |> List.reverse
+    , vOut = List.sortBy .value jsonModel.vOut |> List.reverse
     , fetching = False
     , error = Nothing
     }
@@ -47,20 +64,6 @@ type alias JsonModel =
     , time : Maybe Int
     , vIn : List VIn
     , vOut : List VOut
-    }
-
-
-modelFromJson : JsonModel -> Model
-modelFromJson jsonModel =
-    { hash = jsonModel.hash
-    , size = (String.length jsonModel.hex) // 2
-    , confirmations = jsonModel.confirmations
-    , blockHash = jsonModel.blockHash
-    , time = Maybe.map timestampToTime jsonModel.time
-    , vIn = List.sortBy .amountIn jsonModel.vIn |> List.reverse
-    , vOut = List.sortBy .value jsonModel.vOut |> List.reverse
-    , fetching = False
-    , error = Nothing
     }
 
 
@@ -84,40 +87,6 @@ type alias ScriptPubKey =
     }
 
 
-timestampToTime : Int -> Time
-timestampToTime int =
-    Time.second * (toFloat int)
-
-
-totalSpent : Model -> Float
-totalSpent model =
-    List.map .amountIn model.vIn |> List.foldr (+) 0
-
-
-fee : Model -> Float
-fee model =
-    let
-        totalOut =
-            List.map .value model.vOut |> List.foldr (+) 0
-    in
-        totalSpent model - totalOut
-
-
-feePerKb : Model -> Float
-feePerKb model =
-    fee model * 1.0e3 / toFloat model.size
-
-
-dcrAmount : Float -> String
-dcrAmount float =
-    let
-        rounded =
-            -- remove any floating point arithmetic errors
-            float * 1.0e8 |> round |> toFloat |> (flip (/)) 1.0e8
-    in
-        (toString rounded) ++ " DCR"
-
-
 type Msg
     = GetRawTransaction String
     | GetRawTransactionResult (Result Http.Error JsonModel)
@@ -126,6 +95,9 @@ type Msg
 view : Model -> Html a
 view model =
     let
+        formatType type_ =
+            span [ class "badge badge badge-success" ] [ text type_ ]
+
         formatTime time =
             case time of
                 Nothing ->
@@ -157,7 +129,9 @@ view model =
             , div [ class "card-body" ]
                 [ p [ class "card-text" ]
                     [ dl [ class "row" ]
-                        [ dt [ class "col-3 text-right" ] [ text "confirmations" ]
+                        [ dt [ class "col-3 text-right" ] [ text "type" ]
+                        , dd [ class "col-9" ] [ formatType model.type_ ]
+                        , dt [ class "col-3 text-right" ] [ text "confirmations" ]
                         , dd [ class "col-9" ] [ text <| toString model.confirmations ]
                         , dt [ class "col-3 text-right" ] [ text "time" ]
                         , dd [ class "col-9" ] [ formatTime model.time ]
@@ -175,47 +149,51 @@ view model =
                             ]
                         ]
                     ]
-                ]
-            , hr [] []
-            , div [ class "row" ]
-                [ div [ class "col" ]
-                    [ h4 [ class "text-center" ] [ text "inputs" ]
-                    , ul [ class "list-group list-group-flush" ] <|
-                        List.map
-                            (\vIn ->
-                                li [ class "list-group-item bg-primary" ]
-                                    [ span [ class "badge badge-info" ]
-                                        [ text
-                                            (if vIn.coinbase /= Nothing then
-                                                "coinbase"
-                                             else
-                                                ""
-                                            )
-                                        ]
-                                    , span [ class "float-right" ] [ text <| dcrAmount vIn.amountIn ]
-                                    , (case vIn.txId of
-                                        Just hash ->
-                                            a [ href hash ] [ text <| Decred.shortHash hash ]
+                , hr [] []
+                , div [ class "row" ]
+                    [ div [ class "col" ]
+                        [ h4 [ class "text-center" ]
+                            [ span [ class "badge badge-pill badge-info" ] [ text "inputs" ]
+                            ]
+                        , ul [ class "list-group list-group-flush" ] <|
+                            List.map
+                                (\vIn ->
+                                    li [ class "list-group-item bg-secondary" ]
+                                        [ span [ class "badge badge-info" ]
+                                            [ text
+                                                (if vIn.coinbase /= Nothing then
+                                                    "coinbase"
+                                                 else
+                                                    ""
+                                                )
+                                            ]
+                                        , span [ class "float-right" ] [ text <| dcrAmount vIn.amountIn ]
+                                        , (case vIn.txId of
+                                            Just hash ->
+                                                a [ href hash ] [ text <| shortHash hash ]
 
-                                        Nothing ->
-                                            span [] []
-                                      )
-                                    ]
-                            )
-                            model.vIn
-                    ]
-                , div [ class "col" ]
-                    [ h4 [ class "text-center" ] [ text "outputs" ]
-                    , ul [ class "list-group list-group-flush" ] <|
-                        List.map
-                            (\vOut ->
-                                li [ class "list-group-item bg-success" ]
-                                    [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
-                                    , span [ class "float-right" ] [ text <| dcrAmount vOut.value ]
-                                    , code [ class "mt-2" ] [ text vOut.scriptPubKey.asm ]
-                                    ]
-                            )
-                            model.vOut
+                                            Nothing ->
+                                                span [] []
+                                          )
+                                        ]
+                                )
+                                model.vIn
+                        ]
+                    , div [ class "col" ]
+                        [ h4 [ class "text-center" ]
+                            [ span [ class "badge badge-pill badge-info" ] [ text "outputs" ]
+                            ]
+                        , ul [ class "list-group list-group-flush" ] <|
+                            List.map
+                                (\vOut ->
+                                    li [ class "list-group-item bg-secondary" ]
+                                        [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
+                                        , span [ class "float-right" ] [ text <| dcrAmount vOut.value ]
+                                        , code [ class "mt-2" ] [ text vOut.scriptPubKey.asm ]
+                                        ]
+                                )
+                                model.vOut
+                        ]
                     ]
                 ]
             ]
@@ -306,3 +284,53 @@ decodeScriptPubKey =
     Pipeline.decode ScriptPubKey
         |> Pipeline.requiredAt [ "asm" ] Decode.string
         |> Pipeline.requiredAt [ "type" ] Decode.string
+
+
+
+-- compute functions (infer stuff from JsonModel)
+
+
+computeSize : JsonModel -> Int
+computeSize jsonModel =
+    (String.length jsonModel.hex) // 2
+
+
+computeType : JsonModel -> String
+computeType jsonModel =
+    let
+        hasOutputType type_ jsonModel =
+            List.map (\i -> i.scriptPubKey.type_) jsonModel.vOut
+                |> List.member type_
+    in
+        --- XXX: simplified detection (full rules can be found in dcrd/blockchain/stake/staketx.go)
+        if hasOutputType "stakesubmission" jsonModel then
+            "Ticket"
+        else if hasOutputType "stakegen" jsonModel then
+            "Vote"
+        else if hasOutputType "stakerevoke" jsonModel then
+            "Revocation"
+        else
+            "Regular"
+
+
+
+-- "methods" to get info from Model
+
+
+totalSpent : Model -> Float
+totalSpent model =
+    List.map .amountIn model.vIn |> List.foldr (+) 0
+
+
+fee : Model -> Float
+fee model =
+    let
+        totalOut =
+            List.map .value model.vOut |> List.foldr (+) 0
+    in
+        totalSpent model - totalOut
+
+
+feePerKb : Model -> Float
+feePerKb model =
+    fee model * 1.0e3 / toFloat model.size

@@ -28,3 +28,8 @@ toISOString time =
             ++ ":"
             ++ (String.padLeft 2 '0' (toString second))
             ++ " UTC"
+
+
+timestampToTime : Int -> Time
+timestampToTime int =
+    Time.second * (toFloat int)
