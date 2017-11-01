@@ -140,8 +140,8 @@ view model =
                         , dd [ class "col-9" ] [ formatBlock model.blockHash ]
                         , dt [ class "col-3 text-right" ] [ text "size" ]
                         , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
-                        , dt [ class "col-3 text-right" ] [ text "total spent" ]
-                        , dd [ class "col-9" ] [ text <| dcrAmount (totalSpent model) ]
+                        , dt [ class "col-3 text-right" ] [ text "total sent" ]
+                        , dd [ class "col-9" ] [ text <| dcrAmount (totalSent model) ]
                         , dt [ class "col-3 text-right" ] [ text "fee" ]
                         , dd [ class "col-9" ]
                             [ text <|
@@ -164,18 +164,22 @@ view model =
                                             [ text
                                                 (if vIn.coinbase /= Nothing then
                                                     "coinbase"
+                                                 else if vIn.txId /= Nothing then
+                                                    "outpoint"
                                                  else
-                                                    ""
+                                                    "stakebase"
                                                 )
                                             ]
                                         , span [ class "float-right" ] [ text <| dcrAmount vIn.amountIn ]
-                                        , (case vIn.txId of
-                                            Just hash ->
-                                                a [ href hash ] [ text <| shortHash hash ]
+                                        , div []
+                                            [ (case vIn.txId of
+                                                Just hash ->
+                                                    a [ href hash ] [ text <| "Transaction " ++ shortHash hash ]
 
-                                            Nothing ->
-                                                span [] []
-                                          )
+                                                Nothing ->
+                                                    span [] []
+                                              )
+                                            ]
                                         ]
                                 )
                                 model.vIn
@@ -345,7 +349,7 @@ computeVote jsonModel =
     in
         case voteVersion of
             Nothing ->
-                "v?"
+                "v0"
 
             Just version ->
                 "v" ++ (toString version)
@@ -355,18 +359,24 @@ computeVote jsonModel =
 -- "methods" to get info from Model
 
 
-totalSpent : Model -> Float
-totalSpent model =
+totalVIn : Model -> Float
+totalVIn model =
     List.map .amountIn model.vIn |> List.foldr (+) 0
+
+
+totalVOut : Model -> Float
+totalVOut model =
+    List.map .value model.vOut |> List.foldr (+) 0
+
+
+totalSent : Model -> Float
+totalSent model =
+    Basics.max (totalVIn model) (totalVOut model)
 
 
 fee : Model -> Float
 fee model =
-    let
-        totalOut =
-            List.map .value model.vOut |> List.foldr (+) 0
-    in
-        totalSpent model - totalOut
+    totalSent model - totalVOut model
 
 
 feePerKb : Model -> Float
