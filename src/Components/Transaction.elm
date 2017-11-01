@@ -7,6 +7,7 @@ import Json.Encode as Encode
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Pipeline
 import Time exposing (Time)
+import Regex
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
 import Lib.Decred exposing (..)
@@ -298,19 +299,56 @@ computeSize jsonModel =
 computeType : JsonModel -> String
 computeType jsonModel =
     let
-        hasOutputType type_ jsonModel =
+        hasVOutType type_ jsonModel =
             List.map (\i -> i.scriptPubKey.type_) jsonModel.vOut
                 |> List.member type_
     in
         --- XXX: simplified detection (full rules can be found in dcrd/blockchain/stake/staketx.go)
-        if hasOutputType "stakesubmission" jsonModel then
+        if hasVOutType "stakesubmission" jsonModel then
             "Ticket"
-        else if hasOutputType "stakegen" jsonModel then
-            "Vote"
-        else if hasOutputType "stakerevoke" jsonModel then
+        else if hasVOutType "stakegen" jsonModel then
+            "Vote " ++ (computeVote jsonModel)
+        else if hasVOutType "stakerevoke" jsonModel then
             "Revocation"
         else
             "Regular"
+
+
+computeVote : JsonModel -> String
+computeVote jsonModel =
+    -- some examples:
+    -- "OP_RETURN 010004000000" -- vote v4 and abstain
+    -- "OP_RETURN 050005000000" -- vote v5 and yes
+    let
+        regex =
+            Regex.regex "^OP_RETURN [0-9A-F]{12}$"
+
+        vOut =
+            List.head <|
+                List.filter
+                    (\vOut ->
+                        vOut.scriptPubKey.type_
+                            == "nulldata"
+                            && Regex.contains regex (String.toUpper vOut.scriptPubKey.asm)
+                    )
+                    jsonModel.vOut
+
+        voteVersion =
+            Maybe.andThen
+                (\vOut ->
+                    vOut.scriptPubKey.asm
+                        |> String.slice 14 16
+                        |> String.toInt
+                        |> Result.toMaybe
+                )
+                vOut
+    in
+        case voteVersion of
+            Nothing ->
+                "v?"
+
+            Just version ->
+                "v" ++ (toString version)
 
 
 
