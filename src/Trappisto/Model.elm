@@ -5,6 +5,7 @@ import Window
 import Keyboard
 import Time exposing (Time)
 import Components.Status as StatusComponent
+import Components.Address as AddressComponent
 import Components.Block as BlockComponent
 import Components.Transaction as TransactionComponent
 
@@ -20,6 +21,7 @@ type alias Model =
     { keys : Keys
     , window : Window.Size
     , statusModel : StatusComponent.Model
+    , addressModel : AddressComponent.Model
     , blockModel : BlockComponent.Model
     , transactionModel : TransactionComponent.Model
     , query : String
@@ -36,6 +38,7 @@ initialModel =
     { keys = Keys False False False False False False
     , window = Window.Size 0 0
     , statusModel = StatusComponent.initialModel
+    , addressModel = AddressComponent.initialModel
     , blockModel = BlockComponent.initialModel
     , transactionModel = TransactionComponent.initialModel
     , query = ""
@@ -50,6 +53,7 @@ initialModel =
 type Msg
     = NewUrl Navigation.Location
     | StatusMsg StatusComponent.Msg
+    | AddressMsg AddressComponent.Msg
     | BlockMsg BlockComponent.Msg
     | TransactionMsg TransactionComponent.Msg
     | JsMsg String

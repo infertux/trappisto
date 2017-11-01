@@ -5,6 +5,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Trappisto.Model exposing (..)
 import Components.Status as StatusComponent exposing (view)
+import Components.Address as AddressComponent exposing (view)
 import Components.Block as BlockComponent exposing (view)
 import Components.Transaction as TransactionComponent exposing (view)
 
@@ -28,9 +29,8 @@ getError model =
             Transaction ->
                 model.transactionModel.error
 
-            -- FIXME:
             Address ->
-                Nothing
+                model.addressModel.error
 
             Block ->
                 model.blockModel.error
@@ -94,6 +94,11 @@ statusView model =
     Html.map StatusMsg (StatusComponent.view model.statusModel)
 
 
+addressView : Model -> Html Msg
+addressView model =
+    Html.map AddressMsg (AddressComponent.view model.addressModel)
+
+
 blockView : Model -> Html Msg
 blockView model =
     Html.map BlockMsg (BlockComponent.view model.blockModel)
@@ -130,9 +135,6 @@ view model =
         status model =
             div [ class "row" ] [ statusView model ]
 
-        transaction model =
-            div [ class "row" ] [ div [ class "col-6 offset-3" ] [ transactionView model ] ]
-
         content =
             if model.error /= Nothing then
                 [ searchView model, errorView model ]
@@ -147,6 +149,12 @@ view model =
                         else
                             [ searchView model, errorView model, status model ]
 
+                    Address ->
+                        if isError model then
+                            [ searchView model, errorView model ]
+                        else
+                            [ searchView model, addressView model ]
+
                     Block ->
                         if isError model then
                             [ searchView model, errorView model ]
@@ -157,10 +165,7 @@ view model =
                         if isError model then
                             [ searchView model, errorView model ]
                         else
-                            [ searchView model, transaction model ]
-
-                    _ ->
-                        Debug.crash <| toString model.template
+                            [ searchView model, transactionView model ]
 
         debug =
             [ hr [] []

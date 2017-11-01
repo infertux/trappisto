@@ -5,6 +5,7 @@ import Fuzz exposing (Fuzzer, int, list, string)
 import Test exposing (..)
 import String
 import Json.Decode as Decode
+import Components.Address as Address
 import Components.Block as Block
 import Components.Transaction as Transaction
 
@@ -12,7 +13,24 @@ import Components.Transaction as Transaction
 suite : Test
 suite =
     describe "Unit tests"
-        [ describe "Block"
+        [ describe "Address"
+            [ test "searchRawTransactions" <|
+                \() ->
+                    let
+                        result =
+                            Decode.decodeString (Address.decodeSearchRawTransactions "DsWQNDoyhCKFiTFL9RzGFGV7agACJKc94hG") searchRawTransactionsFixture
+
+                        model =
+                            case result of
+                                Ok jsonModel ->
+                                    jsonModel |> Address.modelFromJson
+
+                                Err error ->
+                                    Debug.crash error
+                    in
+                        Expect.equal 2 <| List.length model.transactions
+            ]
+        , describe "Block"
             [ test "decodeGetBlockHash" <|
                 \() ->
                     Expect.equal (Ok "deadbeef") <| Decode.decodeString Block.decodeGetBlockHash "{\"result\":\"deadbeef\"}"
@@ -22,7 +40,9 @@ suite =
                 \() ->
                     let
                         result =
-                            Decode.decodeString Transaction.decodeGetRawTransaction getRawTransactionConfirmedFixture
+                            Decode.decodeString
+                                (Transaction.decodeGetRawTransaction <| Just "result")
+                                getRawTransactionConfirmedFixture
 
                         model =
                             case result of
@@ -37,7 +57,9 @@ suite =
                 \() ->
                     let
                         result =
-                            Decode.decodeString Transaction.decodeGetRawTransaction getRawTransactionUnconfirmedFixture
+                            Decode.decodeString
+                                (Transaction.decodeGetRawTransaction <| Just "result")
+                                getRawTransactionUnconfirmedFixture
                     in
                         case result of
                             Ok jsonModel ->
@@ -49,7 +71,9 @@ suite =
                 \() ->
                     let
                         result =
-                            Decode.decodeString Transaction.decodeGetRawTransaction getRawTransactionVoteFixture
+                            Decode.decodeString
+                                (Transaction.decodeGetRawTransaction <| Just "result")
+                                getRawTransactionVoteFixture
 
                         jsonModel =
                             case result of
@@ -184,4 +208,11 @@ getRawTransactionVoteFixture : String
 getRawTransactionVoteFixture =
     """
 {"result":{"hex":"01000000020000000000000000000000000000000000000000000000000000000000000000ffffffff00ffffffff2688834f660b4617f2d9b2eebcafcccdaa56cf8d31c7f470204e69d56f2f59260000000001ffffffff0400000000000000000000266a24f308a9d68ce7311d0df08387e17c94056c69bc3e561fbd386f00000000000000c999020000000000000000000000086a060500040000007a2902000000000000001abb76a914a513aec3f5a343a262022200c1fae50977d7c06688acab80ca890100000000001abb76a9142ec50442555a1ef1c25670ce342dcb84cc2653dc88ac000000000000000002992f87080000000000000000ffffffff0200008d7a4581010000002c7b02000500000091483045022100e08d8ade99fbff06f8a9a8afb8cb9b86d3ff2266ff92aab1d1463b5f5403c567022029697b515cbb5299a35cbbb3f1d6bf8bb5c4571b1ffdbf030b562c36fbd45564014751210361ccb81ee09968a41b91cb2dc7e7a04738193d86b1cd78e1f7a7c25fbbcf2f2d2103a4596d0fa527b91b9294283044cac9edf444a41ef5dc07c4c3df6b87fbdb342052ae","txid":"f07d5d96b05fe4537cb0a08a8a925f70cb20a1bd825181acedc32a432e9b3806","version":1,"locktime":0,"expiry":0,"vin":[{"txid":"0000000000000000000000000000000000000000000000000000000000000000","vout":4294967295,"tree":0,"sequence":4294967295,"amountin":1.43077273,"blockheight":0,"blockindex":4294967295,"scriptSig":{"asm":"0 0","hex":"0000"}},{"txid":"26592f6fd5694e2070f4c7318dcf56aacdccafbceeb2d9f217460b664f838826","vout":0,"tree":1,"sequence":4294967295,"amountin":64.63781517,"blockheight":162604,"blockindex":5,"scriptSig":{"asm":"3045022100e08d8ade99fbff06f8a9a8afb8cb9b86d3ff2266ff92aab1d1463b5f5403c567022029697b515cbb5299a35cbbb3f1d6bf8bb5c4571b1ffdbf030b562c36fbd4556401 51210361ccb81ee09968a41b91cb2dc7e7a04738193d86b1cd78e1f7a7c25fbbcf2f2d2103a4596d0fa527b91b9294283044cac9edf444a41ef5dc07c4c3df6b87fbdb342052ae","hex":"483045022100e08d8ade99fbff06f8a9a8afb8cb9b86d3ff2266ff92aab1d1463b5f5403c567022029697b515cbb5299a35cbbb3f1d6bf8bb5c4571b1ffdbf030b562c36fbd45564014751210361ccb81ee09968a41b91cb2dc7e7a04738193d86b1cd78e1f7a7c25fbbcf2f2d2103a4596d0fa527b91b9294283044cac9edf444a41ef5dc07c4c3df6b87fbdb342052ae"}}],"vout":[{"value":0,"n":0,"version":0,"scriptPubKey":{"asm":"OP_RETURN f308a9d68ce7311d0df08387e17c94056c69bc3e561fbd386f00000000000000c9990200","hex":"6a24f308a9d68ce7311d0df08387e17c94056c69bc3e561fbd386f00000000000000c9990200","type":"nulldata"}},{"value":0,"n":1,"version":0,"scriptPubKey":{"asm":"OP_RETURN 050004000000","hex":"6a06050004000000","type":"nulldata"}},{"value":0.0014169,"n":2,"version":0,"scriptPubKey":{"asm":"OP_SSGEN OP_DUP OP_HASH160 a513aec3f5a343a262022200c1fae50977d7c066 OP_EQUALVERIFY OP_CHECKSIG","hex":"bb76a914a513aec3f5a343a262022200c1fae50977d7c06688ac","reqSigs":1,"type":"stakegen","addresses":["Dsg1kZfAtNKW1JDXMKRUymcTdcs7XoStGcm"]}},{"value":66.06717099,"n":3,"version":0,"scriptPubKey":{"asm":"OP_SSGEN OP_DUP OP_HASH160 2ec50442555a1ef1c25670ce342dcb84cc2653dc OP_EQUALVERIFY OP_CHECKSIG","hex":"bb76a9142ec50442555a1ef1c25670ce342dcb84cc2653dc88ac","reqSigs":1,"type":"stakegen","addresses":["DsVECbDAoR4ycqgfyEzZuPEd9865BVayTTh"]}}],"blockhash":"00000000000000b9660dd2d2ee8aa673a4908afdf88b019ecd7ac9137b0a3e23","blockheight":170442,"confirmations":12050,"time":1505935315,"blocktime":1505935315},"error":null,"id":"0"}
+"""
+
+
+searchRawTransactionsFixture : String
+searchRawTransactionsFixture =
+    """
+{"result":[{"hex":"010000000235e26d0beeae21eda371d2b33a42fcb152f1bc7c7bffd47d1703b1bf10c957fa0000000000ffffffff35e26d0beeae21eda371d2b33a42fcb152f1bc7c7bffd47d1703b1bf10c957fa0100000000ffffffff052da68eb501000000000018baa9143308cc7efb6553d9305f4cbd16a0ce071a917a8f8700000000000000000000206a1ea92c9ac541dd5ac40c630e6659ecce25e9fdd70edaf86600000000000058000000000000000000001abd76a914000000000000000000000000000000000000000088ac00000000000000000000206a1ec225aa7b56a7a779ae62985024f4c0c4eb349be02b8428b5010000000058000000000000000000001abd76a914000000000000000000000000000000000000000088ac000000002fbe020002daf866000000000020be0200030000006a47304402200e17dc9caa03fcf90c4827887c52adf735b5c3a0080eecd1638f66914691590c02206c7afa906549e02ece8fd3f914f4570fec10bac42f7f81c4c2ac871a2fda4c6a012102677ec94404b12305b79d64859f0fb957cbddf2687138e0d8ea0b1cfee0a8b6d52b8428b50100000020be0200030000006a4730440220066d47bae408143322d3736d6fa01438ba6c24c12eecc455bf9bc6dba93257d202206b8bd32e910f6f32af7678471c7f1104dcf6bfd9c5f04502ac824f9ac6a67adb012102677ec94404b12305b79d64859f0fb957cbddf2687138e0d8ea0b1cfee0a8b6d5","txid":"7360c9ee07a118a4a5d9c6a223a1850efb876d923b842294d80148eb6d55089f","version":1,"locktime":0,"vin":[{"txid":"fa57c910bfb103177dd4ff7b7cbcf152b1fc423ab3d271a3ed21aeee0b6de235","vout":0,"tree":0,"amountin":0.06748378,"blockheight":179744,"blockindex":3,"scriptSig":{"asm":"304402200e17dc9caa03fcf90c4827887c52adf735b5c3a0080eecd1638f66914691590c02206c7afa906549e02ece8fd3f914f4570fec10bac42f7f81c4c2ac871a2fda4c6a01 02677ec94404b12305b79d64859f0fb957cbddf2687138e0d8ea0b1cfee0a8b6d5","hex":"47304402200e17dc9caa03fcf90c4827887c52adf735b5c3a0080eecd1638f66914691590c02206c7afa906549e02ece8fd3f914f4570fec10bac42f7f81c4c2ac871a2fda4c6a012102677ec94404b12305b79d64859f0fb957cbddf2687138e0d8ea0b1cfee0a8b6d5"},"sequence":4294967295},{"txid":"fa57c910bfb103177dd4ff7b7cbcf152b1fc423ab3d271a3ed21aeee0b6de235","vout":1,"tree":0,"amountin":73.34298667,"blockheight":179744,"blockindex":3,"scriptSig":{"asm":"30440220066d47bae408143322d3736d6fa01438ba6c24c12eecc455bf9bc6dba93257d202206b8bd32e910f6f32af7678471c7f1104dcf6bfd9c5f04502ac824f9ac6a67adb01 02677ec94404b12305b79d64859f0fb957cbddf2687138e0d8ea0b1cfee0a8b6d5","hex":"4730440220066d47bae408143322d3736d6fa01438ba6c24c12eecc455bf9bc6dba93257d202206b8bd32e910f6f32af7678471c7f1104dcf6bfd9c5f04502ac824f9ac6a67adb012102677ec94404b12305b79d64859f0fb957cbddf2687138e0d8ea0b1cfee0a8b6d5"},"sequence":4294967295}],"vout":[{"value":73.40992045,"n":0,"version":0,"scriptPubKey":{"asm":"OP_SSTX OP_HASH160 3308cc7efb6553d9305f4cbd16a0ce071a917a8f OP_EQUAL","hex":"baa9143308cc7efb6553d9305f4cbd16a0ce071a917a8f87","reqSigs":1,"type":"stakesubmission","addresses":["Dcc7S4YkpjjTTfs5u5iSjetP7Fgt5w9zeRB"]}},{"value":0,"n":1,"version":0,"scriptPubKey":{"asm":"OP_RETURN a92c9ac541dd5ac40c630e6659ecce25e9fdd70edaf86600000000000058","hex":"6a1ea92c9ac541dd5ac40c630e6659ecce25e9fdd70edaf86600000000000058","type":"sstxcommitment","addresses":["DsgPR82ghBYgz9N9YtWeqPYH9xujo2AzU21"],"commitamt":0.06748378}},{"value":0,"n":2,"version":0,"scriptPubKey":{"asm":"OP_SSTXCHANGE OP_DUP OP_HASH160 0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG","hex":"bd76a914000000000000000000000000000000000000000088ac","reqSigs":1,"type":"sstxchange","addresses":["DsQxuVRvS4eaJ42dhQEsCXauMWjvopWgrVg"]}},{"value":0,"n":3,"version":0,"scriptPubKey":{"asm":"OP_RETURN c225aa7b56a7a779ae62985024f4c0c4eb349be02b8428b5010000000058","hex":"6a1ec225aa7b56a7a779ae62985024f4c0c4eb349be02b8428b5010000000058","type":"sstxcommitment","addresses":["DsifThinhgyyHnQgGeK41pR38r8N2QkhHWA"],"commitamt":73.34298667}},{"value":0,"n":4,"version":0,"scriptPubKey":{"asm":"OP_SSTXCHANGE OP_DUP OP_HASH160 0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG","hex":"bd76a914000000000000000000000000000000000000000088ac","reqSigs":1,"type":"sstxchange","addresses":["DsQxuVRvS4eaJ42dhQEsCXauMWjvopWgrVg"]}}],"blockhash":"000000000000000bff1953514c6b415a7f255d98f0d1f7e894f6cbbe422770bb","confirmations":2769,"time":1508722281,"blocktime":1508722281},{"hex":"010000000478b7aa13c72cb8951f259c76e6dbb6453e2a9bf9936f63738d4c7be75869fce60200000000ffffffff99af850d19b722ca65501e4bf337c2760efb0ec001dc22c999ff1cb96cd16b000400000000ffffffffa5dac2c1fe17d0ab444451be2446f7bb5bf3c91cfab924a4d67c8abba55de22a0200000000fffffffff6a93ac5c87c5c054982f344f965b3b557e67f6847069468c021552c0f2f68170300000001ffffffff03daf866000000000000001976a9143ba95774a5f6403a871506871a9bf00837e001e388ac2b8428b50100000000001976a9143ba95774a5f6403a871506871a9bf00837e001e388ac3054d9450100000000001976a914179ba046cf2e020b082e940947222c5dc88f163d88ac000000000000000004aeee445d0100000013be0200070000006a47304402202f1ed8a15d20c5e2f148ea8f81a572b4e1f41ddc202047ab3da077a1da7a3f2e02202ec519af6d128a1804b36ccb5ca8d3b8fc8bb6e1c0e83b2a7aa668dbaccf340c01210218a853746bcd93ed69c5fe35c9cb2f659f0c6ac4b440533cacb6092cd66d09289ad53c1e00000000dcbc02000c0000006b483045022100847ae67c9dc92c87207f2038633b813570369b9c1f6158084e07bfcb0741990c02207209347f4a7d8751e596c7e53df7c1ba08a60cae7ca2ce4941d5559c3a1a09d20121026b178eed4781a39fa13e9f0c4c1400878e7904428d7507b64da699f779d00b69dd4d33030000000090bc0200030000006a47304402203d12a0058910679339dac2c3b6e8a3a24f38da8ca50c22ce7cdbd551ad613c0402205b6be8bd3a035ba6c66c3d1d0f6f7eccfabc7cd5d82c217ee6c224618bd063e7012102c8310a4a8a3d49b8e36ae6c496ff28ed00bfc1b53eb226cdd1561a501b814f417cf2b47c010000001fbd0200010000006a4730440220355bc3d91f63df3b75680892a17ff622c9be7d85fbb71ffec3286828a4ddad54022026e494a63411a933dfbaa945d9bf4149a76318259a14e58966761ed5afd09de1012103f024516b437f9ef7b4a1ce41cbd0aede79bcccec0f65b1b8231b7c5810e7c787","txid":"fa57c910bfb103177dd4ff7b7cbcf152b1fc423ab3d271a3ed21aeee0b6de235","version":1,"locktime":0,"vin":[{"txid":"e6fc6958e77b4c8d73636f93f99b2a3e45b6dbe6769c251f95b82cc713aab778","vout":2,"tree":0,"amountin":58.59765934,"blockheight":179731,"blockindex":7,"scriptSig":{"asm":"304402202f1ed8a15d20c5e2f148ea8f81a572b4e1f41ddc202047ab3da077a1da7a3f2e02202ec519af6d128a1804b36ccb5ca8d3b8fc8bb6e1c0e83b2a7aa668dbaccf340c01 0218a853746bcd93ed69c5fe35c9cb2f659f0c6ac4b440533cacb6092cd66d0928","hex":"47304402202f1ed8a15d20c5e2f148ea8f81a572b4e1f41ddc202047ab3da077a1da7a3f2e02202ec519af6d128a1804b36ccb5ca8d3b8fc8bb6e1c0e83b2a7aa668dbaccf340c01210218a853746bcd93ed69c5fe35c9cb2f659f0c6ac4b440533cacb6092cd66d0928"},"sequence":4294967295},{"txid":"006bd16cb91cff99c922dc01c00efb0e76c237f34b1e5065ca22b7190d85af99","vout":4,"tree":0,"amountin":5.07303322,"blockheight":179420,"blockindex":12,"scriptSig":{"asm":"3045022100847ae67c9dc92c87207f2038633b813570369b9c1f6158084e07bfcb0741990c02207209347f4a7d8751e596c7e53df7c1ba08a60cae7ca2ce4941d5559c3a1a09d201 026b178eed4781a39fa13e9f0c4c1400878e7904428d7507b64da699f779d00b69","hex":"483045022100847ae67c9dc92c87207f2038633b813570369b9c1f6158084e07bfcb0741990c02207209347f4a7d8751e596c7e53df7c1ba08a60cae7ca2ce4941d5559c3a1a09d20121026b178eed4781a39fa13e9f0c4c1400878e7904428d7507b64da699f779d00b69"},"sequence":4294967295},{"txid":"2ae25da5bb8a7cd6a424b9fa1cc9f35bbbf74624be514444abd017fec1c2daa5","vout":2,"tree":0,"amountin":0.53693917,"blockheight":179344,"blockindex":3,"scriptSig":{"asm":"304402203d12a0058910679339dac2c3b6e8a3a24f38da8ca50c22ce7cdbd551ad613c0402205b6be8bd3a035ba6c66c3d1d0f6f7eccfabc7cd5d82c217ee6c224618bd063e701 02c8310a4a8a3d49b8e36ae6c496ff28ed00bfc1b53eb226cdd1561a501b814f41","hex":"47304402203d12a0058910679339dac2c3b6e8a3a24f38da8ca50c22ce7cdbd551ad613c0402205b6be8bd3a035ba6c66c3d1d0f6f7eccfabc7cd5d82c217ee6c224618bd063e7012102c8310a4a8a3d49b8e36ae6c496ff28ed00bfc1b53eb226cdd1561a501b814f41"},"sequence":4294967295},{"txid":"17682f0f2c5521c068940647687fe657b5b365f944f38249055c7cc8c53aa9f6","vout":3,"tree":1,"amountin":63.87200636,"blockheight":179487,"blockindex":1,"scriptSig":{"asm":"30440220355bc3d91f63df3b75680892a17ff622c9be7d85fbb71ffec3286828a4ddad54022026e494a63411a933dfbaa945d9bf4149a76318259a14e58966761ed5afd09de101 03f024516b437f9ef7b4a1ce41cbd0aede79bcccec0f65b1b8231b7c5810e7c787","hex":"4730440220355bc3d91f63df3b75680892a17ff622c9be7d85fbb71ffec3286828a4ddad54022026e494a63411a933dfbaa945d9bf4149a76318259a14e58966761ed5afd09de1012103f024516b437f9ef7b4a1ce41cbd0aede79bcccec0f65b1b8231b7c5810e7c787"},"sequence":4294967295}],"vout":[{"value":0.06748378,"n":0,"version":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 3ba95774a5f6403a871506871a9bf00837e001e3 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9143ba95774a5f6403a871506871a9bf00837e001e388ac","reqSigs":1,"type":"pubkeyhash","addresses":["DsWQNDoyhCKFiTFL9RzGFGV7agACJKc94hG"]}},{"value":73.34298667,"n":1,"version":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 3ba95774a5f6403a871506871a9bf00837e001e3 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9143ba95774a5f6403a871506871a9bf00837e001e388ac","reqSigs":1,"type":"pubkeyhash","addresses":["DsWQNDoyhCKFiTFL9RzGFGV7agACJKc94hG"]}},{"value":54.66838064,"n":2,"version":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 179ba046cf2e020b082e940947222c5dc88f163d OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914179ba046cf2e020b082e940947222c5dc88f163d88ac","reqSigs":1,"type":"pubkeyhash","addresses":["DsT7jTw2GsfYq7SqchjtiNPJWuneX8kLsk3"]}}],"blockhash":"0000000000000031940e69d15e9258b63aa448bb55761fae3af35e761d204322","confirmations":2770,"time":1508722005,"blocktime":1508722005}],"error":null,"id":"0"}
 """

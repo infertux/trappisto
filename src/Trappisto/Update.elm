@@ -7,6 +7,7 @@ import Time exposing (Time)
 import Window
 import Trappisto.Model exposing (..)
 import Components.Status as StatusComponent
+import Components.Address as AddressComponent
 import Components.Block as BlockComponent
 import Components.Transaction as TransactionComponent
 
@@ -144,6 +145,20 @@ update action model =
                 )
                     |> updateUrl
 
+        AddressMsg addressMsg ->
+            let
+                ( updatedModel, cmd ) =
+                    AddressComponent.update addressMsg model.addressModel
+            in
+                ( { model
+                    | template = Address
+                    , query = updatedModel.address
+                    , addressModel = updatedModel
+                  }
+                , Cmd.map AddressMsg cmd
+                )
+                    |> updateUrl
+
         BlockMsg blockMsg ->
             let
                 ( updatedModel, cmd ) =
@@ -217,7 +232,7 @@ update action model =
 
 fetchAddress : String -> Model -> ( Model, Cmd Msg )
 fetchAddress address model =
-    ( model, Cmd.none )
+    update (AddressMsg (AddressComponent.SearchRawTransactions address)) model
 
 
 fetchBlockByHash : String -> Model -> ( Model, Cmd Msg )

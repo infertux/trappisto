@@ -123,90 +123,94 @@ view model =
                     scriptPubKey.addresses
                 )
     in
-        div
-            [ class "card bg-dark" ]
-            [ h5 [ class "card-header" ]
-                [ span [] [ text <| "Transaction " ++ model.hash ]
-                , a
-                    [ class "float-right"
-                    , target "_blank"
-                    , title "Open on dcrdata.org"
-                    , href <| "https://explorer.dcrdata.org/explorer/tx/" ++ model.hash
-                    ]
-                    [ span [ class "oi oi-external-link" ] [] ]
-                ]
-            , div [ class "card-body" ]
-                [ p [ class "card-text" ]
-                    [ dl [ class "row" ]
-                        [ dt [ class "col-3 text-right" ] [ text "type" ]
-                        , dd [ class "col-9" ] [ formatType model.type_ ]
-                        , dt [ class "col-3 text-right" ] [ text "confirmations" ]
-                        , dd [ class "col-9" ] [ text <| toString model.confirmations ]
-                        , dt [ class "col-3 text-right" ] [ text "time" ]
-                        , dd [ class "col-9" ] [ formatTime model.time ]
-                        , dt [ class "col-3 text-right" ] [ text "block" ]
-                        , dd [ class "col-9" ] [ formatBlock model.blockHash ]
-                        , dt [ class "col-3 text-right" ] [ text "size" ]
-                        , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
-                        , dt [ class "col-3 text-right" ] [ text "total sent" ]
-                        , dd [ class "col-9" ] [ text <| dcrAmount (totalSent model) ]
-                        , dt [ class "col-3 text-right" ] [ text "fee" ]
-                        , dd [ class "col-9" ]
-                            [ text <|
-                                dcrAmount (fee model)
-                                    ++ (" (" ++ (dcrAmount (feePerKb model)) ++ "/kB)")
+        div [ class "row" ]
+            [ div [ class "col-6 offset-3" ]
+                [ div
+                    [ class "card bg-dark" ]
+                    [ h5 [ class "card-header" ]
+                        [ span [] [ text <| "Transaction " ++ model.hash ]
+                        , a
+                            [ class "float-right"
+                            , target "_blank"
+                            , title "Open on dcrdata.org"
+                            , href <| "https://explorer.dcrdata.org/explorer/tx/" ++ model.hash
                             ]
+                            [ span [ class "oi oi-external-link" ] [] ]
                         ]
-                    ]
-                , hr [] []
-                , div [ class "row" ]
-                    [ div [ class "col" ]
-                        [ h4 [ class "text-center" ]
-                            [ span [ class "badge badge-pill badge-info" ] [ text "inputs" ]
+                    , div [ class "card-body" ]
+                        [ p [ class "card-text" ]
+                            [ dl [ class "row" ]
+                                [ dt [ class "col-3 text-right" ] [ text "type" ]
+                                , dd [ class "col-9" ] [ formatType model.type_ ]
+                                , dt [ class "col-3 text-right" ] [ text "confirmations" ]
+                                , dd [ class "col-9" ] [ text <| toString model.confirmations ]
+                                , dt [ class "col-3 text-right" ] [ text "time" ]
+                                , dd [ class "col-9" ] [ formatTime model.time ]
+                                , dt [ class "col-3 text-right" ] [ text "block" ]
+                                , dd [ class "col-9" ] [ formatBlock model.blockHash ]
+                                , dt [ class "col-3 text-right" ] [ text "size" ]
+                                , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
+                                , dt [ class "col-3 text-right" ] [ text "total sent" ]
+                                , dd [ class "col-9" ] [ text <| dcrAmount (totalSent model) ]
+                                , dt [ class "col-3 text-right" ] [ text "fee" ]
+                                , dd [ class "col-9" ]
+                                    [ text <|
+                                        dcrAmount (fee model)
+                                            ++ (" (" ++ (dcrAmount (feePerKb model)) ++ "/kB)")
+                                    ]
+                                ]
                             ]
-                        , ul [ class "list-group list-group-flush" ] <|
-                            List.map
-                                (\vIn ->
-                                    li [ class "list-group-item bg-secondary" ]
-                                        [ span [ class "badge badge-info" ]
-                                            [ text
-                                                (if vIn.coinbase /= Nothing then
-                                                    "coinbase"
-                                                 else if vIn.txId /= Nothing then
-                                                    "outpoint"
-                                                 else
-                                                    "stakebase"
-                                                )
-                                            ]
-                                        , span [ class "float-right" ] [ text <| dcrAmount vIn.amountIn ]
-                                        , div []
-                                            [ (case vIn.txId of
-                                                Just hash ->
-                                                    a [ href hash ] [ text <| "Transaction " ++ shortHash hash ]
+                        , hr [] []
+                        , div [ class "row" ]
+                            [ div [ class "col" ]
+                                [ h4 [ class "text-center" ]
+                                    [ span [ class "badge badge-pill badge-info" ] [ text "inputs" ]
+                                    ]
+                                , ul [ class "list-group list-group-flush" ] <|
+                                    List.map
+                                        (\vIn ->
+                                            li [ class "list-group-item bg-secondary" ]
+                                                [ span [ class "badge badge-info" ]
+                                                    [ text
+                                                        (if vIn.coinbase /= Nothing then
+                                                            "coinbase"
+                                                         else if vIn.txId /= Nothing then
+                                                            "outpoint"
+                                                         else
+                                                            "stakebase"
+                                                        )
+                                                    ]
+                                                , span [ class "float-right" ] [ text <| dcrAmount vIn.amountIn ]
+                                                , div []
+                                                    [ (case vIn.txId of
+                                                        Just hash ->
+                                                            a [ href hash ] [ text <| "Transaction " ++ shortHash hash ]
 
-                                                Nothing ->
-                                                    span [] []
-                                              )
-                                            ]
-                                        ]
-                                )
-                                model.vIn
-                        ]
-                    , div [ class "col" ]
-                        [ h4 [ class "text-center" ]
-                            [ span [ class "badge badge-pill badge-info" ] [ text "outputs" ]
+                                                        Nothing ->
+                                                            span [] []
+                                                      )
+                                                    ]
+                                                ]
+                                        )
+                                        model.vIn
+                                ]
+                            , div [ class "col" ]
+                                [ h4 [ class "text-center" ]
+                                    [ span [ class "badge badge-pill badge-info" ] [ text "outputs" ]
+                                    ]
+                                , ul [ class "list-group list-group-flush" ] <|
+                                    List.map
+                                        (\vOut ->
+                                            li [ class "list-group-item bg-secondary" ]
+                                                [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
+                                                , span [ class "float-right" ] [ text <| dcrAmount vOut.value ]
+                                                , formatAddresses vOut.scriptPubKey
+                                                , code [ class "mt-2" ] [ text vOut.scriptPubKey.asm ]
+                                                ]
+                                        )
+                                        model.vOut
+                                ]
                             ]
-                        , ul [ class "list-group list-group-flush" ] <|
-                            List.map
-                                (\vOut ->
-                                    li [ class "list-group-item bg-secondary" ]
-                                        [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
-                                        , span [ class "float-right" ] [ text <| dcrAmount vOut.value ]
-                                        , formatAddresses vOut.scriptPubKey
-                                        , code [ class "mt-2" ] [ text vOut.scriptPubKey.asm ]
-                                        ]
-                                )
-                                model.vOut
                         ]
                     ]
                 ]
@@ -243,19 +247,31 @@ getRawTransaction model hash =
         params =
             Encode.list [ Encode.string hash, Encode.int 1 ]
     in
-        JsonRpc.post "getrawtransaction" params GetRawTransactionResult decodeGetRawTransaction
+        JsonRpc.post "getrawtransaction"
+            params
+            GetRawTransactionResult
+            (decodeGetRawTransaction (Just "result"))
 
 
-decodeGetRawTransaction : Decode.Decoder JsonModel
-decodeGetRawTransaction =
-    Pipeline.decode JsonModel
-        |> Pipeline.requiredAt [ "result", "txid" ] Decode.string
-        |> Pipeline.requiredAt [ "result", "hex" ] Decode.string
-        |> Pipeline.optionalAt [ "result", "confirmations" ] Decode.int 0
-        |> Pipeline.optionalAt [ "result", "blockhash" ] (Decode.maybe Decode.string) Nothing
-        |> Pipeline.optionalAt [ "result", "time" ] (Decode.maybe Decode.int) Nothing
-        |> Pipeline.requiredAt [ "result", "vin" ] (Decode.list decodeVIn)
-        |> Pipeline.requiredAt [ "result", "vout" ] (Decode.list decodeVOut)
+decodeGetRawTransaction : Maybe String -> Decode.Decoder JsonModel
+decodeGetRawTransaction prefix =
+    let
+        path key =
+            case prefix of
+                Nothing ->
+                    [ key ]
+
+                Just string ->
+                    [ string, key ]
+    in
+        Pipeline.decode JsonModel
+            |> Pipeline.requiredAt (path "txid") Decode.string
+            |> Pipeline.requiredAt (path "hex") Decode.string
+            |> Pipeline.optionalAt (path "confirmations") Decode.int 0
+            |> Pipeline.optionalAt (path "blockhash") (Decode.maybe Decode.string) Nothing
+            |> Pipeline.optionalAt (path "time") (Decode.maybe Decode.int) Nothing
+            |> Pipeline.requiredAt (path "vin") (Decode.list decodeVIn)
+            |> Pipeline.requiredAt (path "vout") (Decode.list decodeVOut)
 
 
 zeroToNothing : Maybe String -> Decode.Decoder (Maybe String)
