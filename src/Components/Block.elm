@@ -11,6 +11,7 @@ import Time exposing (Time)
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
 import Lib.Decred as Decred
+import Trappisto.Helpers exposing (..)
 
 
 type alias Model =
@@ -70,7 +71,7 @@ type Msg
 view : Model -> Html Msg
 view model =
     div [ class "row align-items-center" ]
-        [ div [ class "col-3 text-right" ]
+        [ div [ class "col-2 text-right" ]
             [ a
                 [ class "btn btn-secondary"
                 , href "javascript:void(0)"
@@ -78,18 +79,12 @@ view model =
                 ]
                 [ text "<" ]
             ]
-        , div [ class "col-6" ]
+        , div [ class "col-8" ]
             [ div
                 [ class "card bg-dark" ]
                 [ h5 [ class "card-header" ]
                     [ span [] [ text <| "Block " ++ model.hash ]
-                    , a
-                        [ class "float-right"
-                        , target "_blank"
-                        , title "Open on dcrdata.org"
-                        , href <| "https://explorer.dcrdata.org/explorer/block/" ++ model.hash
-                        ]
-                        [ span [ class "oi oi-external-link" ] [] ]
+                    , dcrDataLink <| "block" ++ model.hash
                     ]
                 , div [ class "card-body" ]
                     [ p [ class "card-text" ]

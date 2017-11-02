@@ -15,6 +15,6 @@ clean:
 	$(RM) -r public/assets/js/elm*.js elm-stuff/ tests/elm-stuff/
 
 nginx:
-	nginx -c nginx/nginx.conf -p . -g 'daemon off;'
+	sudo -u http -- nginx -c nginx/nginx.conf -p . -g 'daemon off;'
 
 .PHONY: clean nginx

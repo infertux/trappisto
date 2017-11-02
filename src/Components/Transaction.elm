@@ -11,6 +11,7 @@ import Regex
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
 import Lib.Decred exposing (..)
+import Trappisto.Helpers exposing (..)
 
 
 type alias Model =
@@ -19,6 +20,7 @@ type alias Model =
     , size : Int
     , confirmations : Int
     , blockHash : Maybe String
+    , blockHeight : Maybe Int
     , time : Maybe Time
     , vIn : List VIn
     , vOut : List VOut
@@ -34,6 +36,7 @@ initialModel =
     , size = -1
     , confirmations = -1
     , blockHash = Nothing
+    , blockHeight = Nothing
     , time = Nothing
     , vIn = []
     , vOut = []
@@ -49,6 +52,7 @@ modelFromJson jsonModel =
     , size = computeSize jsonModel
     , confirmations = jsonModel.confirmations
     , blockHash = jsonModel.blockHash
+    , blockHeight = jsonModel.blockHeight
     , time = Maybe.map TimeExtra.timestampToTime jsonModel.time
     , vIn = List.sortBy .amountIn jsonModel.vIn |> List.reverse
     , vOut = List.sortBy .value jsonModel.vOut |> List.reverse
@@ -62,6 +66,7 @@ type alias JsonModel =
     , hex : String
     , confirmations : Int
     , blockHash : Maybe String
+    , blockHeight : Maybe Int
     , time : Maybe Int
     , vIn : List VIn
     , vOut : List VOut
@@ -72,7 +77,7 @@ type alias VIn =
     { txId : Maybe String
     , coinbase : Maybe String
     , amountIn : Float
-    , blockHeight : Int
+    , blockHeight : Maybe Int
     }
 
 
@@ -100,21 +105,13 @@ view model =
         formatType type_ =
             span [ class "badge badge badge-success" ] [ text type_ ]
 
-        formatTime time =
-            case time of
+        formatBlock hash height =
+            case hash of
                 Nothing ->
-                    span [] [ text "recent (still in mempool)" ]
-
-                Just time ->
-                    span [] [ text <| TimeExtra.toISOString time ]
-
-        formatBlock block =
-            case block of
-                Nothing ->
-                    span [] [ text "N/A (still in mempool)" ]
+                    span [] [ text "N/A (unconfirmed)" ]
 
                 Just hash ->
-                    a [ href hash ] [ text hash ]
+                    a [ href hash ] [ text <| toString <| Maybe.withDefault -1 height ]
 
         formatAddresses scriptPubKey =
             div [] <|
@@ -122,20 +119,54 @@ view model =
                     (\address -> div [] [ a [ href address ] [ text address ] ])
                     scriptPubKey.addresses
                 )
+
+        formatVIn vIn =
+            vIn
+                |> List.map
+                    (\vIn ->
+                        li [ class "list-group-item bg-secondary" ]
+                            [ span [ class "badge badge-info" ]
+                                [ text
+                                    (if vIn.coinbase /= Nothing then
+                                        "coinbase"
+                                     else if vIn.txId /= Nothing then
+                                        "outpoint"
+                                     else
+                                        "stakebase"
+                                    )
+                                ]
+                            , span [ class "float-right" ] [ text <| toString vIn.amountIn ]
+                            , div []
+                                [ (case vIn.txId of
+                                    Just hash ->
+                                        a [ href hash ] [ text <| "Transaction " ++ shortHash hash ]
+
+                                    Nothing ->
+                                        span [] []
+                                  )
+                                ]
+                            ]
+                    )
+
+        formatVOut vOut =
+            vOut
+                |> List.map
+                    (\vOut ->
+                        li [ class "list-group-item bg-secondary" ]
+                            [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
+                            , span [ class "float-right" ] [ text <| dcrAmount vOut.value ]
+                            , formatAddresses vOut.scriptPubKey
+                            , code [ class "mt-2" ] [ text vOut.scriptPubKey.asm ]
+                            ]
+                    )
     in
         div [ class "row" ]
-            [ div [ class "col-6 offset-3" ]
+            [ div [ class "col-8 offset-2" ]
                 [ div
                     [ class "card bg-dark" ]
                     [ h5 [ class "card-header" ]
                         [ span [] [ text <| "Transaction " ++ model.hash ]
-                        , a
-                            [ class "float-right"
-                            , target "_blank"
-                            , title "Open on dcrdata.org"
-                            , href <| "https://explorer.dcrdata.org/explorer/tx/" ++ model.hash
-                            ]
-                            [ span [ class "oi oi-external-link" ] [] ]
+                        , dcrDataLink <| "tx/" ++ model.hash
                         ]
                     , div [ class "card-body" ]
                         [ p [ class "card-text" ]
@@ -145,9 +176,9 @@ view model =
                                 , dt [ class "col-3 text-right" ] [ text "confirmations" ]
                                 , dd [ class "col-9" ] [ text <| toString model.confirmations ]
                                 , dt [ class "col-3 text-right" ] [ text "time" ]
-                                , dd [ class "col-9" ] [ formatTime model.time ]
+                                , dd [ class "col-9" ] [ text <| formatTime model ]
                                 , dt [ class "col-3 text-right" ] [ text "block" ]
-                                , dd [ class "col-9" ] [ formatBlock model.blockHash ]
+                                , dd [ class "col-9" ] [ formatBlock model.blockHash model.blockHeight ]
                                 , dt [ class "col-3 text-right" ] [ text "size" ]
                                 , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
                                 , dt [ class "col-3 text-right" ] [ text "total sent" ]
@@ -164,51 +195,17 @@ view model =
                         , div [ class "row" ]
                             [ div [ class "col" ]
                                 [ h4 [ class "text-center" ]
-                                    [ span [ class "badge badge-pill badge-info" ] [ text "inputs" ]
+                                    [ span [ class "badge badge-pill badge-info" ]
+                                        [ text <| pluralize (List.length model.vIn) "input" ]
                                     ]
-                                , ul [ class "list-group list-group-flush" ] <|
-                                    List.map
-                                        (\vIn ->
-                                            li [ class "list-group-item bg-secondary" ]
-                                                [ span [ class "badge badge-info" ]
-                                                    [ text
-                                                        (if vIn.coinbase /= Nothing then
-                                                            "coinbase"
-                                                         else if vIn.txId /= Nothing then
-                                                            "outpoint"
-                                                         else
-                                                            "stakebase"
-                                                        )
-                                                    ]
-                                                , span [ class "float-right" ] [ text <| dcrAmount vIn.amountIn ]
-                                                , div []
-                                                    [ (case vIn.txId of
-                                                        Just hash ->
-                                                            a [ href hash ] [ text <| "Transaction " ++ shortHash hash ]
-
-                                                        Nothing ->
-                                                            span [] []
-                                                      )
-                                                    ]
-                                                ]
-                                        )
-                                        model.vIn
+                                , ul [ class "list-group list-group-flush" ] <| formatVIn model.vIn
                                 ]
                             , div [ class "col" ]
                                 [ h4 [ class "text-center" ]
-                                    [ span [ class "badge badge-pill badge-info" ] [ text "outputs" ]
+                                    [ span [ class "badge badge-pill badge-info" ]
+                                        [ text <| pluralize (List.length model.vOut) "output" ]
                                     ]
-                                , ul [ class "list-group list-group-flush" ] <|
-                                    List.map
-                                        (\vOut ->
-                                            li [ class "list-group-item bg-secondary" ]
-                                                [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
-                                                , span [ class "float-right" ] [ text <| dcrAmount vOut.value ]
-                                                , formatAddresses vOut.scriptPubKey
-                                                , code [ class "mt-2" ] [ text vOut.scriptPubKey.asm ]
-                                                ]
-                                        )
-                                        model.vOut
+                                , ul [ class "list-group list-group-flush" ] <| formatVOut model.vOut
                                 ]
                             ]
                         ]
@@ -250,25 +247,24 @@ getRawTransaction model hash =
         JsonRpc.post "getrawtransaction"
             params
             GetRawTransactionResult
-            (decodeGetRawTransaction (Just "result"))
+            (decodeGetRawTransaction True)
 
 
-decodeGetRawTransaction : Maybe String -> Decode.Decoder JsonModel
+decodeGetRawTransaction : Bool -> Decode.Decoder JsonModel
 decodeGetRawTransaction prefix =
     let
         path key =
-            case prefix of
-                Nothing ->
-                    [ key ]
-
-                Just string ->
-                    [ string, key ]
+            if prefix then
+                [ "result", key ]
+            else
+                [ key ]
     in
         Pipeline.decode JsonModel
             |> Pipeline.requiredAt (path "txid") Decode.string
             |> Pipeline.requiredAt (path "hex") Decode.string
             |> Pipeline.optionalAt (path "confirmations") Decode.int 0
             |> Pipeline.optionalAt (path "blockhash") (Decode.maybe Decode.string) Nothing
+            |> Pipeline.optionalAt (path "blockheight") (Decode.maybe Decode.int) Nothing
             |> Pipeline.optionalAt (path "time") (Decode.maybe Decode.int) Nothing
             |> Pipeline.requiredAt (path "vin") (Decode.list decodeVIn)
             |> Pipeline.requiredAt (path "vout") (Decode.list decodeVOut)
@@ -299,7 +295,7 @@ decodeVIn =
         |> Pipeline.optionalAt [ "txid" ] (Decode.maybe Decode.string |> Decode.andThen zeroToNothing) Nothing
         |> Pipeline.optionalAt [ "coinbase" ] (Decode.maybe Decode.string) Nothing
         |> Pipeline.requiredAt [ "amountin" ] Decode.float
-        |> Pipeline.requiredAt [ "blockheight" ] Decode.int
+        |> Pipeline.optionalAt [ "blockheight" ] (Decode.maybe Decode.int) Nothing
 
 
 decodeVOut : Decode.Decoder VOut
@@ -385,14 +381,65 @@ computeVote jsonModel =
 -- "methods" to get info from Model
 
 
+formatTime : Model -> String
+formatTime model =
+    case model.time of
+        Nothing ->
+            "recent (unconfirmed)"
+
+        Just time ->
+            TimeExtra.toISOString time
+
+
+vInToAddress : String -> Model -> Float
+vInToAddress address model =
+    model.vIn
+        |> List.filter (\vIn -> vIn.txId /= Nothing)
+        -- FIXME: txId or coinbase?
+        |> List.map .amountIn
+        |> List.sum
+        |> negate
+
+
+vOutToAddress : String -> Model -> Float
+vOutToAddress address model =
+    model.vOut
+        |> List.filter
+            (\vOut -> Just address == List.head vOut.scriptPubKey.addresses)
+        |> List.map .value
+        |> List.sum
+
+
+sentToAddress : String -> Model -> Maybe Float
+sentToAddress address model =
+    let
+        outpoint =
+            model.vIn |> List.any (\vIn -> vIn.txId /= Nothing)
+    in
+        if outpoint then
+            Nothing
+        else
+            Just <| vOutToAddress address model
+
+
+
+-- vOutToAddressUnspent : String -> Model -> Float
+-- vOutToAddressUnspent address model =
+--     model.vOut
+--         |> List.filter
+--             (\vOut -> List.member address vOut.scriptPubKey.addresses)
+--         |> List.map .value
+--         |> List.sum
+
+
 totalVIn : Model -> Float
 totalVIn model =
-    List.map .amountIn model.vIn |> List.foldr (+) 0
+    List.map .amountIn model.vIn |> List.sum
 
 
 totalVOut : Model -> Float
 totalVOut model =
-    List.map .value model.vOut |> List.foldr (+) 0
+    List.map .value model.vOut |> List.sum
 
 
 totalSent : Model -> Float

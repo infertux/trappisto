@@ -59,7 +59,7 @@ searchView model =
     let
         search =
             div [ class "row" ]
-                [ div [ class "col-6 offset-3" ]
+                [ div [ class "col-8 offset-2" ]
                     [ input
                         [ id "query"
                         , name "query"

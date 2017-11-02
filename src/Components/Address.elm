@@ -7,6 +7,7 @@ import Json.Encode as Encode
 import Json.Decode as Decode
 import Lib.JsonRpc as JsonRpc
 import Lib.Decred exposing (..)
+import Trappisto.Helpers exposing (..)
 import Components.Transaction as Transaction
 
 
@@ -55,46 +56,78 @@ type Msg
 view : Model -> Html a
 view model =
     let
-        formatFoo foo =
-            span [ class "badge badge badge-success" ] [ text foo ]
+        details model =
+            if missingTransactions model then
+                [ div [ class "alert alert-warning" ]
+                    [ text <| "Only the " ++ toString maxTransactionCount ++ " most recent transactions are shown below." ]
+                ]
+            else
+                [ dl [ class "row" ]
+                    (List.concat <|
+                        List.map
+                            (\( label, amount ) ->
+                                case amount of
+                                    Nothing ->
+                                        [ dt [ class "col-3 text-right" ] [ text label ]
+                                        , dd [ class "col-9" ] [ text "?" ]
+                                        ]
+
+                                    Just amount ->
+                                        [ dt [ class "col-3 text-right" ] [ text label ]
+                                        , dd [ class "col-9" ] [ text <| dcrAmount amount ]
+                                        ]
+                            )
+                            [ ( "total received", totalReceived model )
+                            , ( "total sent", totalSent model )
+                            , ( "balance", balance model )
+                            ]
+                    )
+                ]
     in
         div [ class "row" ]
-            [ div [ class "col-6 offset-3" ]
+            [ div [ class "col-8 offset-2" ]
                 [ div [ class "card bg-dark" ]
                     [ h5 [ class "card-header" ]
                         [ span [] [ text <| "Address " ++ model.address ]
-                        , a
-                            [ class "float-right"
-                            , target "_blank"
-                            , title "Open on dcrdata.org"
-                            , href <| "https://explorer.dcrdata.org/explorer/address/" ++ model.address
-                            ]
-                            [ span [ class "oi oi-external-link" ] [] ]
+                        , dcrDataLink <| "address/" ++ model.address
                         ]
                     , div [ class "card-body" ]
-                        [ p [ class "card-text" ]
-                            [ dl [ class "row" ]
-                                [ dt [ class "col-3 text-right" ] [ text "foo" ]
-                                , dd [ class "col-9" ] [ text "?" ]
-                                , dt [ class "col-3 text-right" ] [ text "last time" ]
-                                , dd [ class "col-9" ] [ text "?" ]
-                                , dt [ class "col-3 text-right" ] [ text "balance" ]
-                                , dd [ class "col-9" ] [ text <| dcrAmount (balance model) ]
-                                ]
-                            ]
+                        [ p [ class "card-text" ] (details model)
                         , hr [] []
                         , div [ class "row" ]
                             [ div [ class "col" ]
                                 [ h4 [ class "text-center" ]
-                                    [ span [ class "badge badge-pill badge-info" ] [ text "transactions" ]
+                                    [ span [ class "badge badge-pill badge-info" ] [ text <| toString (List.length model.transactions) ++ " transactions" ]
                                     ]
-                                , ul [ class "list-group list-group-flush" ] <|
-                                    List.map
-                                        (\transaction ->
-                                            li [ class "list-group-item bg-secondary" ]
-                                                [ span [ class "badge badge-info" ] [ text "foo" ] ]
-                                        )
-                                        model.transactions
+                                , table [ class "table table-dark table-striped" ]
+                                    [ thead []
+                                        [ tr []
+                                            [ th [] [ text "ID" ]
+                                            , th [] [ text "type" ]
+                                            , th [] [ text "credit" ]
+                                            , th [] [ text "time" ]
+                                            , th [] [ abbr [ title "confirmations" ] [ text "conf." ] ]
+                                            ]
+                                        ]
+                                    , tbody [] <|
+                                        List.map
+                                            (\tx ->
+                                                tr []
+                                                    [ td [] [ a [ href tx.hash ] [ text <| shortHash tx.hash ] ]
+                                                    , td [] [ text tx.type_ ]
+                                                    , td []
+                                                        [ text <|
+                                                            (Transaction.sentToAddress model.address tx
+                                                                |> Maybe.map dcrAmount
+                                                                |> Maybe.withDefault "?"
+                                                            )
+                                                        ]
+                                                    , td [] [ text <| Transaction.formatTime tx ]
+                                                    , td [] [ text <| toString tx.confirmations ]
+                                                    ]
+                                            )
+                                            model.transactions
+                                    ]
                                 ]
                             ]
                         ]
@@ -145,7 +178,7 @@ searchRawTransactions model address =
                 , Encode.int 0
 
                 -- count
-                , Encode.int 100
+                , Encode.int maxTransactionCount
 
                 -- vinextra
                 , Encode.int 0
@@ -165,7 +198,7 @@ decodeSearchRawTransactions address =
     Decode.map2 JsonModel
         (Decode.succeed address)
         (Decode.field "result"
-            (Decode.list (Transaction.decodeGetRawTransaction Nothing))
+            (Decode.list (Transaction.decodeGetRawTransaction False))
         )
 
 
@@ -173,7 +206,48 @@ decodeSearchRawTransactions address =
 -- "methods" to get info from Model
 
 
-balance : Model -> Float
+maxTransactionCount : Int
+maxTransactionCount =
+    50
+
+
+missingTransactions : Model -> Bool
+missingTransactions model =
+    List.length model.transactions >= maxTransactionCount
+
+
+totalReceived : Model -> Maybe Float
+totalReceived model =
+    if missingTransactions model then
+        Nothing
+    else
+        model.transactions
+            |> List.map (\tx -> Transaction.vOutToAddress model.address tx)
+            |> List.sum
+            |> Just
+
+
+totalSent : Model -> Maybe Float
+totalSent model =
+    let
+        amounts =
+            List.map (\tx -> Transaction.sentToAddress model.address tx)
+                model.transactions
+
+        unkown =
+            amounts |> List.any (\amount -> amount == Nothing)
+    in
+        if missingTransactions model then
+            Nothing
+        else if unkown then
+            Nothing
+        else
+            amounts
+                |> List.map (\amount -> Maybe.withDefault 0 amount)
+                |> List.sum
+                |> Just
+
+
+balance : Model -> Maybe Float
 balance model =
-    -- TODO:
-    0
+    Maybe.map2 (-) (totalReceived model) (totalSent model)

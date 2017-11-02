@@ -78,7 +78,7 @@ update action model =
                     "298e5cc3d985bfe7f81dc135f360abe089edd4396b86d2de66b0cef42b21d980"
 
                 possibleAddress query =
-                    String.length query /= 64 && String.left 2 query == "Ds"
+                    String.length query /= 64 && String.left 1 query == "D"
 
                 -- XXX: Remove a few zeros in the future... 00000000
                 possibleBlockHash query =
@@ -152,7 +152,6 @@ update action model =
             in
                 ( { model
                     | template = Address
-                    , query = updatedModel.address
                     , addressModel = updatedModel
                   }
                 , Cmd.map AddressMsg cmd
