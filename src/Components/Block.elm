@@ -111,16 +111,32 @@ view model =
                     [ class "card bg-dark" ]
                     [ h5 [ class "card-header" ]
                         [ span [] [ text <| "Block " ++ model.hash ]
-                        , dcrDataLink <| "block" ++ model.hash
+                        , dcrDataLink <| "block/" ++ model.hash
                         ]
                     , div [ class "card-body" ]
                         [ p [ class "card-text" ]
                             [ dlBuilder <|
-                                [ ( "height", Just <| toString model.height )
-                                , ( "time", Just <| TimeExtra.toISOString model.time )
-                                , ( "confirmations", Just <| toString model.confirmations )
-                                , ( "size", Just <| toString model.size ++ " bytes" )
-                                , ( "ticket price", Maybe.map dcrAmount model.ticketPrice )
+                                [ ( "height"
+                                  , Just <|
+                                        span []
+                                            [ text <| toString model.height ]
+                                  )
+                                , ( "time"
+                                  , Just <|
+                                        span []
+                                            [ text <| TimeExtra.toISOString model.time ]
+                                  )
+                                , ( "confirmations"
+                                  , Just <|
+                                        span []
+                                            [ text <| toString model.confirmations ]
+                                  )
+                                , ( "size"
+                                  , Just <|
+                                        span []
+                                            [ text <| toString model.size ++ " bytes" ]
+                                  )
+                                , ( "ticket price", Maybe.map formatAmount model.ticketPrice )
                                 ]
                             ]
                         ]

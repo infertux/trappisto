@@ -16,14 +16,15 @@ pluralize count singular =
             phrase ++ "s"
 
 
-dcrAmount : Float -> String
-dcrAmount float =
+formatAmount : Float -> Html a
+formatAmount float =
     let
         rounded =
             -- remove any floating point arithmetic errors
             float * 1.0e8 |> round |> toFloat |> (flip (/)) 1.0e8
     in
-        (toString rounded) ++ " DCR"
+        span [ class "amount" ]
+            [ text <| toString rounded ]
 
 
 shortHash : String -> String
@@ -31,7 +32,7 @@ shortHash hash =
     String.concat [ String.left 2 hash, "...", String.right 2 hash ]
 
 
-dlBuilder : List ( String, Maybe String ) -> Html a
+dlBuilder : List ( String, Maybe (Html a) ) -> Html a
 dlBuilder list =
     let
         filter ( label, value ) =
@@ -42,7 +43,7 @@ dlBuilder list =
                 Just value ->
                     Just <|
                         [ dt [ class "col-3 text-right" ] [ text label ]
-                        , dd [ class "col-9" ] [ text value ]
+                        , dd [ class "col-9" ] [ value ]
                         ]
     in
         dl [ class "row" ] (List.concat <| List.filterMap filter list)

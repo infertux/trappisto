@@ -62,9 +62,9 @@ view model =
                 ]
             else
                 [ dlBuilder <|
-                    [ ( "total received", Maybe.map dcrAmount <| totalReceived model )
-                    , ( "total sent", Maybe.map dcrAmount <| totalSent model )
-                    , ( "balance", Maybe.map dcrAmount <| balance model )
+                    [ ( "total received", Maybe.map formatAmount <| totalReceived model )
+                    , ( "total sent", Maybe.map formatAmount <| totalSent model )
+                    , ( "balance", Maybe.map formatAmount <| balance model )
                     ]
                 ]
     in
@@ -100,11 +100,11 @@ view model =
                                                     [ td [] [ a [ href tx.hash ] [ text <| shortHash tx.hash ] ]
                                                     , td [] [ text tx.type_ ]
                                                     , td []
-                                                        [ text <|
-                                                            (Transaction.sentToAddress model.address tx
-                                                                |> Maybe.map dcrAmount
-                                                                |> Maybe.withDefault "?"
-                                                            )
+                                                        [ (Transaction.sentToAddress model.address tx
+                                                            |> Maybe.map formatAmount
+                                                            |> Maybe.withDefault
+                                                                (span [] [ text "?" ])
+                                                          )
                                                         ]
                                                     , td [] [ text <| Transaction.formatTime tx ]
                                                     , td [] [ text <| toString tx.confirmations ]

@@ -159,7 +159,7 @@ view model =
                     (\vOut ->
                         li [ class "list-group-item bg-secondary" ]
                             [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
-                            , span [ class "float-right" ] [ text <| dcrAmount vOut.value ]
+                            , span [ class "float-right" ] [ formatAmount vOut.value ]
                             , formatAddresses vOut.scriptPubKey
                             , code [ class "mt-2" ] [ text vOut.scriptPubKey.asm ]
                             ]
@@ -187,12 +187,13 @@ view model =
                                 , dt [ class "col-3 text-right" ] [ text "size" ]
                                 , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
                                 , dt [ class "col-3 text-right" ] [ text "total sent" ]
-                                , dd [ class "col-9" ] [ text <| dcrAmount (totalSent model) ]
+                                , dd [ class "col-9" ] [ formatAmount (totalSent model) ]
                                 , dt [ class "col-3 text-right" ] [ text "fee" ]
                                 , dd [ class "col-9" ]
-                                    [ text <|
-                                        dcrAmount (fee model)
-                                            ++ (" (" ++ (dcrAmount (feePerKb model)) ++ "/kB)")
+                                    [ formatAmount (fee model)
+                                    , span [] [ text " (" ]
+                                    , formatAmount (feePerKb model)
+                                    , span [] [ text "/kB)" ]
                                     ]
                                 ]
                             ]
