@@ -10,6 +10,10 @@ import Components.Block as BlockComponent
 import Components.Transaction as TransactionComponent
 
 
+type alias Config =
+    { coin : String }
+
+
 type Template
     = Status
     | Address
@@ -18,7 +22,8 @@ type Template
 
 
 type alias Model =
-    { keys : Keys
+    { config : Config
+    , keys : Keys
     , window : Window.Size
     , statusModel : StatusComponent.Model
     , addressModel : AddressComponent.Model
@@ -35,7 +40,8 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    { keys = Keys False False False False False False
+    { config = Config "BTC"
+    , keys = Keys False False False False False False
     , window = Window.Size 0 0
     , statusModel = StatusComponent.initialModel
     , addressModel = AddressComponent.initialModel

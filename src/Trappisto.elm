@@ -6,9 +6,9 @@ import Trappisto.Update exposing (init, update, subscriptions)
 import Trappisto.View exposing (view)
 
 
-main : Program Never Trappisto.Model.Model Trappisto.Model.Msg
+main : Program Trappisto.Model.Config Trappisto.Model.Model Trappisto.Model.Msg
 main =
-    Navigation.program Trappisto.Model.NewUrl
+    Navigation.programWithFlags Trappisto.Model.NewUrl
         { init = init
         , view = view
         , update = update

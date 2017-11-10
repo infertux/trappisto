@@ -18,19 +18,22 @@ port elmToJs : String -> Cmd msg
 port jsToElm : (String -> msg) -> Sub msg
 
 
-init : Navigation.Location -> ( Model, Cmd Msg )
-init location =
+init : Config -> Navigation.Location -> ( Model, Cmd Msg )
+init config location =
     let
         query =
             extractQuery location
 
-        ( model, msg ) =
+        model =
+            { initialModel | config = config, query = query }
+
+        ( updatedModel, msg ) =
             if String.isEmpty query then
-                update FetchStatus { initialModel | query = query }
+                update FetchStatus model
             else
-                update (Query query) { initialModel | query = query }
+                update (Query query) model
     in
-        ( model
+        ( updatedModel
         , Cmd.batch
             [ elmToJs "focus"
             , msg

@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Trappisto - Decred Interactive Block Explorer</title>
+    <title>Trappisto - Interactive Block Explorer</title>
 
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <meta name="description" content="Trappisto - Decred Interactive Block Explorer">
+    <meta name="description" content="Trappisto - Interactive Block Explorer">
     <meta name="application-name" content="Trappisto">
 
     <meta property="og:url" content="https://localhost">
     <meta property="og:title" content="Trappisto">
-    <meta property="og:description" content="Trappisto - Decred Interactive Block Explorer">
+    <meta property="og:description" content="Trappisto - Interactive Block Explorer">
     <meta property="og:image" content="https://localhost/assets/images/logo.png">
 
     <link rel="icon" href="assets/images/favicon/favicon.ico">
@@ -91,7 +91,7 @@
 
     window.addEventListener('load', () => {
       const elmAppDiv = document.querySelector('#elm-app');
-      const elmApp = Elm.Trappisto.embed(elmAppDiv);
+      const elmApp = Elm.Trappisto.embed(elmAppDiv, { coin: 'BTC' });
 
       elmApp.ports.elmToJs.subscribe((command) => {
         console.log('Received command: ' + command);

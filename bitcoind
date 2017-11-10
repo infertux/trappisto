@@ -1,0 +1,1 @@
+/usr/bin/bitcoin-qt -par=-1 -server -txindex -rpcuser=Ijxzsrmsrlqhddgkfj55fgkceMcstsoazikasesuc -rpcpassword=sta2bjbfyqctytqujolcatbvvksjulrUqrzc6wuMc

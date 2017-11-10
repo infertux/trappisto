@@ -10,7 +10,6 @@ import Time exposing (Time)
 import Regex
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
-import Lib.Decred exposing (..)
 import Trappisto.Helpers exposing (..)
 
 
@@ -106,12 +105,18 @@ view model =
             span [ class "badge badge badge-success" ] [ text type_ ]
 
         formatBlock hash height =
-            case hash of
-                Nothing ->
+            case ( hash, height ) of
+                ( Nothing, Nothing ) ->
                     span [] [ text "N/A (unconfirmed)" ]
 
-                Just hash ->
-                    a [ href hash ] [ text <| toString <| Maybe.withDefault -1 height ]
+                ( Just hash, Nothing ) ->
+                    a [ href hash ] [ text hash ]
+
+                ( Nothing, Just height ) ->
+                    a [ href <| toString height ] [ text <| toString height ]
+
+                ( Just hash, Just height ) ->
+                    a [ href hash ] [ text <| toString height ]
 
         formatAddresses scriptPubKey =
             div [] <|
@@ -294,7 +299,7 @@ decodeVIn =
         -- no txid for coinbase txs
         |> Pipeline.optionalAt [ "txid" ] (Decode.maybe Decode.string |> Decode.andThen zeroToNothing) Nothing
         |> Pipeline.optionalAt [ "coinbase" ] (Decode.maybe Decode.string) Nothing
-        |> Pipeline.requiredAt [ "amountin" ] Decode.float
+        |> Pipeline.optionalAt [ "amountin" ] Decode.float 0
         |> Pipeline.optionalAt [ "blockheight" ] (Decode.maybe Decode.int) Nothing
 
 

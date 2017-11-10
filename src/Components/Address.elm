@@ -6,7 +6,6 @@ import Http exposing (Error)
 import Json.Encode as Encode
 import Json.Decode as Decode
 import Lib.JsonRpc as JsonRpc
-import Lib.Decred exposing (..)
 import Trappisto.Helpers exposing (..)
 import Components.Transaction as Transaction
 
@@ -62,26 +61,11 @@ view model =
                     [ text <| "Only the " ++ toString maxTransactionCount ++ " most recent transactions are shown below." ]
                 ]
             else
-                [ dl [ class "row" ]
-                    (List.concat <|
-                        List.map
-                            (\( label, amount ) ->
-                                case amount of
-                                    Nothing ->
-                                        [ dt [ class "col-3 text-right" ] [ text label ]
-                                        , dd [ class "col-9" ] [ text "?" ]
-                                        ]
-
-                                    Just amount ->
-                                        [ dt [ class "col-3 text-right" ] [ text label ]
-                                        , dd [ class "col-9" ] [ text <| dcrAmount amount ]
-                                        ]
-                            )
-                            [ ( "total received", totalReceived model )
-                            , ( "total sent", totalSent model )
-                            , ( "balance", balance model )
-                            ]
-                    )
+                [ dlBuilder <|
+                    [ ( "total received", Maybe.map dcrAmount <| totalReceived model )
+                    , ( "total sent", Maybe.map dcrAmount <| totalSent model )
+                    , ( "balance", Maybe.map dcrAmount <| balance model )
+                    ]
                 ]
     in
         div [ class "row" ]
@@ -180,8 +164,8 @@ searchRawTransactions model address =
                 -- count
                 , Encode.int maxTransactionCount
 
-                -- vinextra
-                , Encode.int 0
+                -- vinextra to get prevOut addresses
+                , Encode.int 1
 
                 -- reverse
                 , Encode.bool True

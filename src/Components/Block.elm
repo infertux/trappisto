@@ -10,7 +10,6 @@ import Json.Decode.Pipeline as Pipeline
 import Time exposing (Time)
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
-import Lib.Decred as Decred
 import Trappisto.Helpers exposing (..)
 
 
@@ -20,7 +19,7 @@ type alias Model =
     , time : Time
     , confirmations : Int
     , size : Int
-    , ticketPrice : Float
+    , ticketPrice : Maybe Float
     , transactions : List String
     , tickets : List String
     , previousBlockHash : Maybe String
@@ -37,7 +36,7 @@ initialModel =
     , time = -1
     , confirmations = -1
     , size = -1
-    , ticketPrice = -1
+    , ticketPrice = Nothing
     , transactions = []
     , tickets = []
     , previousBlockHash = Nothing
@@ -53,7 +52,7 @@ type alias JsonModel =
     , time : Int
     , confirmations : Int
     , size : Int
-    , ticketPrice : Float
+    , ticketPrice : Maybe Float
     , transactions : List String
     , tickets : List String
     , previousBlockHash : Maybe String
@@ -70,65 +69,64 @@ type Msg
 
 view : Model -> Html Msg
 view model =
-    div [ class "row align-items-center" ]
-        [ div [ class "col-2 text-right" ]
-            [ a
-                [ class "btn btn-secondary"
-                , href "javascript:void(0)"
-                , onClick (GetBlock "000000000000006fa9bf10d4a39d0cbc6ef8dc2f2db3e7841fd33b7ad973811a")
-                ]
-                [ text "<" ]
+    let
+        transactions =
+            [ dt [ class "col-3 text-right" ] [ text "stake transactions" ]
+            , dd [ class "col-9" ]
+                ((span [ class "mr-2" ] [ text (toString <| List.length model.tickets) ])
+                    :: (List.map
+                            (\tx ->
+                                a
+                                    [ href tx, class "badge badge-secondary ml-1" ]
+                                    [ text <| shortHash tx ]
+                            )
+                            model.tickets
+                       )
+                )
+            , dt [ class "col-3 text-right" ] [ text "normal transactions" ]
+            , dd [ class "col-9" ]
+                ((span [ class "mr-2" ] [ text (toString <| List.length model.transactions) ])
+                    :: (List.map
+                            (\tx ->
+                                a
+                                    [ href tx, class "badge badge-light ml-1" ]
+                                    [ text <| shortHash tx ]
+                            )
+                            model.transactions
+                       )
+                )
             ]
-        , div [ class "col-8" ]
-            [ div
-                [ class "card bg-dark" ]
-                [ h5 [ class "card-header" ]
-                    [ span [] [ text <| "Block " ++ model.hash ]
-                    , dcrDataLink <| "block" ++ model.hash
+    in
+        div [ class "row align-items-center" ]
+            [ div [ class "col-2 text-right" ]
+                [ a
+                    [ class "btn btn-secondary"
+                    , href "javascript:void(0)"
+                    , onClick (GetBlock "000000000000006fa9bf10d4a39d0cbc6ef8dc2f2db3e7841fd33b7ad973811a")
                     ]
-                , div [ class "card-body" ]
-                    [ p [ class "card-text" ]
-                        [ dl [ class "row" ]
-                            [ dt [ class "col-3 text-right" ] [ text "height" ]
-                            , dd [ class "col-9" ] [ text <| toString model.height ]
-                            , dt [ class "col-3 text-right" ] [ text "time" ]
-                            , dd [ class "col-9" ] [ text <| TimeExtra.toISOString model.time ]
-                            , dt [ class "col-3 text-right" ] [ text "confirmations" ]
-                            , dd [ class "col-9" ] [ text <| toString model.confirmations ]
-                            , dt [ class "col-3 text-right" ] [ text "size" ]
-                            , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
-                            , dt [ class "col-3 text-right" ] [ text "ticket price" ]
-                            , dd [ class "col-9" ] [ text <| toString model.ticketPrice ++ " DCR" ]
-                            , dt [ class "col-3 text-right" ] [ text "stake transactions" ]
-                            , dd [ class "col-9" ]
-                                ((span [ class "mr-2" ] [ text (toString <| List.length model.tickets) ])
-                                    :: (List.map
-                                            (\tx ->
-                                                a
-                                                    [ href tx, class "badge badge-secondary ml-1" ]
-                                                    [ text <| Decred.shortHash tx ]
-                                            )
-                                            model.tickets
-                                       )
-                                )
-                            , dt [ class "col-3 text-right" ] [ text "normal transactions" ]
-                            , dd [ class "col-9" ]
-                                ((span [ class "mr-2" ] [ text (toString <| List.length model.transactions) ])
-                                    :: (List.map
-                                            (\tx ->
-                                                a
-                                                    [ href tx, class "badge badge-light ml-1" ]
-                                                    [ text <| Decred.shortHash tx ]
-                                            )
-                                            model.transactions
-                                       )
-                                )
+                    [ text "<" ]
+                ]
+            , div [ class "col-8" ]
+                [ div
+                    [ class "card bg-dark" ]
+                    [ h5 [ class "card-header" ]
+                        [ span [] [ text <| "Block " ++ model.hash ]
+                        , dcrDataLink <| "block" ++ model.hash
+                        ]
+                    , div [ class "card-body" ]
+                        [ p [ class "card-text" ]
+                            [ dlBuilder <|
+                                [ ( "height", Just <| toString model.height )
+                                , ( "time", Just <| TimeExtra.toISOString model.time )
+                                , ( "confirmations", Just <| toString model.confirmations )
+                                , ( "size", Just <| toString model.size ++ " bytes" )
+                                , ( "ticket price", Maybe.map dcrAmount model.ticketPrice )
+                                ]
                             ]
                         ]
                     ]
                 ]
             ]
-        ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -228,7 +226,7 @@ decodeGetBlock =
         |> Pipeline.requiredAt [ "result", "time" ] Decode.int
         |> Pipeline.requiredAt [ "result", "confirmations" ] Decode.int
         |> Pipeline.requiredAt [ "result", "size" ] Decode.int
-        |> Pipeline.requiredAt [ "result", "sbits" ] Decode.float
+        |> Pipeline.optionalAt [ "result", "sbits" ] (Decode.maybe Decode.float) Nothing
         |> Pipeline.requiredAt [ "result", "tx" ] (Decode.list Decode.string)
         |> Pipeline.optionalAt [ "result", "stx" ] (Decode.list Decode.string) []
         |> Pipeline.optionalAt [ "result", "previousblockhash" ] (Decode.maybe Decode.string) Nothing
