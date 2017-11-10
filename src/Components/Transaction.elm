@@ -144,7 +144,9 @@ view model =
                             , div []
                                 [ (case vIn.txId of
                                     Just hash ->
-                                        a [ href hash ] [ text <| "Transaction " ++ shortHash hash ]
+                                        a
+                                            [ href hash ]
+                                            [ text <| "Transaction " ++ shortHash hash ]
 
                                     Nothing ->
                                         span [] []
@@ -177,17 +179,23 @@ view model =
                         [ p [ class "card-text" ]
                             [ dl [ class "row" ]
                                 [ dt [ class "col-3 text-right" ] [ text "type" ]
-                                , dd [ class "col-9" ] [ formatType model.type_ ]
+                                , dd [ class "col-9" ]
+                                    [ formatType model.type_ ]
                                 , dt [ class "col-3 text-right" ] [ text "confirmations" ]
-                                , dd [ class "col-9" ] [ text <| toString model.confirmations ]
+                                , dd [ class "col-9" ]
+                                    [ text <| toString model.confirmations ]
                                 , dt [ class "col-3 text-right" ] [ text "time" ]
-                                , dd [ class "col-9" ] [ text <| formatTime model ]
+                                , dd [ class "col-9" ]
+                                    [ text <| formatTime model ]
                                 , dt [ class "col-3 text-right" ] [ text "block" ]
-                                , dd [ class "col-9" ] [ formatBlock model.blockHash model.blockHeight ]
+                                , dd [ class "col-9" ]
+                                    [ formatBlock model.blockHash model.blockHeight ]
                                 , dt [ class "col-3 text-right" ] [ text "size" ]
-                                , dd [ class "col-9" ] [ text <| toString model.size ++ " bytes" ]
+                                , dd [ class "col-9" ]
+                                    [ text <| toString model.size ++ " bytes" ]
                                 , dt [ class "col-3 text-right" ] [ text "total sent" ]
-                                , dd [ class "col-9" ] [ formatAmount (totalSent model) ]
+                                , dd [ class "col-9" ]
+                                    [ formatAmount (totalSent model) ]
                                 , dt [ class "col-3 text-right" ] [ text "fee" ]
                                 , dd [ class "col-9" ]
                                     [ formatAmount (fee model)
@@ -204,14 +212,16 @@ view model =
                                     [ span [ class "badge badge-pill badge-info" ]
                                         [ text <| pluralize (List.length model.vIn) "input" ]
                                     ]
-                                , ul [ class "list-group list-group-flush" ] <| formatVIn model.vIn
+                                , ul [ class "list-group list-group-flush" ] <|
+                                    formatVIn model.vIn
                                 ]
                             , div [ class "col" ]
                                 [ h4 [ class "text-center" ]
                                     [ span [ class "badge badge-pill badge-info" ]
                                         [ text <| pluralize (List.length model.vOut) "output" ]
                                     ]
-                                , ul [ class "list-group list-group-flush" ] <| formatVOut model.vOut
+                                , ul [ class "list-group list-group-flush" ] <|
+                                    formatVOut model.vOut
                                 ]
                             ]
                         ]
@@ -276,29 +286,15 @@ decodeGetRawTransaction prefix =
             |> Pipeline.requiredAt (path "vout") (Decode.list decodeVOut)
 
 
-zeroToNothing : Maybe String -> Decode.Decoder (Maybe String)
-zeroToNothing maybe =
-    let
-        zero =
-            "0000000000000000000000000000000000000000000000000000000000000000"
-    in
-        Decode.succeed <|
-            case maybe of
-                Just string ->
-                    if string == zero then
-                        Nothing
-                    else
-                        maybe
-
-                Nothing ->
-                    maybe
-
-
 decodeVIn : Decode.Decoder VIn
 decodeVIn =
     Pipeline.decode VIn
         -- no txid for coinbase txs
-        |> Pipeline.optionalAt [ "txid" ] (Decode.maybe Decode.string |> Decode.andThen zeroToNothing) Nothing
+        |> Pipeline.optionalAt [ "txid" ]
+            (Decode.maybe Decode.string
+                |> Decode.andThen (\txid -> zeroesToNothing txid |> Decode.succeed)
+            )
+            Nothing
         |> Pipeline.optionalAt [ "coinbase" ] (Decode.maybe Decode.string) Nothing
         |> Pipeline.optionalAt [ "amountin" ] Decode.float 0
         |> Pipeline.optionalAt [ "blockheight" ] (Decode.maybe Decode.int) Nothing
@@ -335,7 +331,8 @@ computeType jsonModel =
             List.map (\i -> i.scriptPubKey.type_) jsonModel.vOut
                 |> List.member type_
     in
-        --- XXX: simplified detection (full rules can be found in dcrd/blockchain/stake/staketx.go)
+        --- XXX: simplified detection
+        --- full rules can be found in dcrd/blockchain/stake/staketx.go
         if hasVOutType "stakesubmission" jsonModel then
             "Ticket"
         else if hasVOutType "stakegen" jsonModel then
@@ -426,16 +423,6 @@ sentToAddress address model =
             Nothing
         else
             Just <| vOutToAddress address model
-
-
-
--- vOutToAddressUnspent : String -> Model -> Float
--- vOutToAddressUnspent address model =
---     model.vOut
---         |> List.filter
---             (\vOut -> List.member address vOut.scriptPubKey.addresses)
---         |> List.map .value
---         |> List.sum
 
 
 totalVIn : Model -> Float

@@ -77,6 +77,7 @@ update action model =
 
         Query query ->
             let
+                --- FIXME: add BTC genesis?
                 genesis =
                     "298e5cc3d985bfe7f81dc135f360abe089edd4396b86d2de66b0cef42b21d980"
 
@@ -85,10 +86,12 @@ update action model =
 
                 -- XXX: Remove a few zeros in the future... 00000000
                 possibleBlockHash query =
-                    (String.length query == 64 && String.left 8 query == "00000000") || query == genesis
+                    (String.length query == 64 && String.left 8 query == "00000000")
+                        || (query == genesis)
 
                 possibleTransaction query =
-                    String.length query == 64 && String.left 8 query /= "00000000" && query /= genesis
+                    (String.length query == 64 && String.left 8 query /= "00000000")
+                        && (query /= genesis)
 
                 updatedModel =
                     { model | query = query, error = Nothing }

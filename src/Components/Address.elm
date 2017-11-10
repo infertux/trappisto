@@ -58,7 +58,11 @@ view model =
         details model =
             if missingTransactions model then
                 [ div [ class "alert alert-warning" ]
-                    [ text <| "Only the " ++ toString maxTransactionCount ++ " most recent transactions are shown below." ]
+                    [ text <|
+                        "Only the "
+                            ++ toString maxTransactionCount
+                            ++ " most recent transactions are shown below."
+                    ]
                 ]
             else
                 [ dlBuilder <|
@@ -67,6 +71,25 @@ view model =
                     , ( "balance", Maybe.map formatAmount <| balance model )
                     ]
                 ]
+
+        transactions model =
+            model.transactions
+                |> List.map
+                    (\tx ->
+                        tr []
+                            [ td [] [ a [ href tx.hash ] [ text <| shortHash tx.hash ] ]
+                            , td [] [ text tx.type_ ]
+                            , td []
+                                [ (Transaction.sentToAddress model.address tx
+                                    |> Maybe.map formatAmount
+                                    |> Maybe.withDefault
+                                        (span [] [ text "?" ])
+                                  )
+                                ]
+                            , td [] [ text <| Transaction.formatTime tx ]
+                            , td [] [ text <| toString tx.confirmations ]
+                            ]
+                    )
     in
         div [ class "row" ]
             [ div [ class "col-8 offset-2" ]
@@ -81,7 +104,11 @@ view model =
                         , div [ class "row" ]
                             [ div [ class "col" ]
                                 [ h4 [ class "text-center" ]
-                                    [ span [ class "badge badge-pill badge-info" ] [ text <| toString (List.length model.transactions) ++ " transactions" ]
+                                    [ span [ class "badge badge-pill badge-info" ]
+                                        [ text <|
+                                            toString (List.length model.transactions)
+                                                ++ " transactions"
+                                        ]
                                     ]
                                 , table [ class "table table-dark table-striped" ]
                                     [ thead []
@@ -90,27 +117,11 @@ view model =
                                             , th [] [ text "type" ]
                                             , th [] [ text "credit" ]
                                             , th [] [ text "time" ]
-                                            , th [] [ abbr [ title "confirmations" ] [ text "conf." ] ]
+                                            , th []
+                                                [ abbr [ title "confirmations" ] [ text "conf." ] ]
                                             ]
                                         ]
-                                    , tbody [] <|
-                                        List.map
-                                            (\tx ->
-                                                tr []
-                                                    [ td [] [ a [ href tx.hash ] [ text <| shortHash tx.hash ] ]
-                                                    , td [] [ text tx.type_ ]
-                                                    , td []
-                                                        [ (Transaction.sentToAddress model.address tx
-                                                            |> Maybe.map formatAmount
-                                                            |> Maybe.withDefault
-                                                                (span [] [ text "?" ])
-                                                          )
-                                                        ]
-                                                    , td [] [ text <| Transaction.formatTime tx ]
-                                                    , td [] [ text <| toString tx.confirmations ]
-                                                    ]
-                                            )
-                                            model.transactions
+                                    , tbody [] <| transactions model
                                     ]
                                 ]
                             ]
@@ -230,6 +241,10 @@ totalSent model =
                 |> List.map (\amount -> Maybe.withDefault 0 amount)
                 |> List.sum
                 |> Just
+
+
+
+--- FIXME: should not be a Maybe
 
 
 balance : Model -> Maybe Float

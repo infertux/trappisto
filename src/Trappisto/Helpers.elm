@@ -58,3 +58,20 @@ dcrDataLink path =
         , href <| "https://explorer.dcrdata.org/explorer/" ++ path
         ]
         [ span [ class "oi oi-external-link" ] [] ]
+
+
+zeroesToNothing : Maybe String -> Maybe String
+zeroesToNothing maybe =
+    let
+        zeroes =
+            "0000000000000000000000000000000000000000000000000000000000000000"
+    in
+        case maybe of
+            Just string ->
+                if string == zeroes then
+                    Nothing
+                else
+                    maybe
+
+            Nothing ->
+                Nothing

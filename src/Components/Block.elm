@@ -102,6 +102,8 @@ view model =
                 [ a
                     [ class "btn btn-secondary"
                     , href "javascript:void(0)"
+
+                    -- FIXME: prevblock
                     , onClick (GetBlock "000000000000006fa9bf10d4a39d0cbc6ef8dc2f2db3e7841fd33b7ad973811a")
                     ]
                     [ text "<" ]
@@ -167,15 +169,7 @@ update msg model =
                 Ok jsonModel ->
                     let
                         previousBlockHash =
-                            case jsonModel.previousBlockHash of
-                                Just hash ->
-                                    if hash /= "0000000000000000000000000000000000000000000000000000000000000000" then
-                                        Just hash
-                                    else
-                                        Nothing
-
-                                Nothing ->
-                                    Nothing
+                            zeroesToNothing jsonModel.previousBlockHash
                     in
                         ( { model
                             | height = jsonModel.height
@@ -245,8 +239,12 @@ decodeGetBlock =
         |> Pipeline.optionalAt [ "result", "sbits" ] (Decode.maybe Decode.float) Nothing
         |> Pipeline.requiredAt [ "result", "tx" ] (Decode.list Decode.string)
         |> Pipeline.optionalAt [ "result", "stx" ] (Decode.list Decode.string) []
-        |> Pipeline.optionalAt [ "result", "previousblockhash" ] (Decode.maybe Decode.string) Nothing
-        |> Pipeline.optionalAt [ "result", "nextblockhash" ] (Decode.maybe Decode.string) Nothing
+        |> Pipeline.optionalAt [ "result", "previousblockhash" ]
+            (Decode.maybe Decode.string)
+            Nothing
+        |> Pipeline.optionalAt [ "result", "nextblockhash" ]
+            (Decode.maybe Decode.string)
+            Nothing
 
 
 decodeGetBlockHash : Decode.Decoder String

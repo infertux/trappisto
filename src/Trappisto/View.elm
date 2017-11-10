@@ -63,8 +63,9 @@ searchView model =
                     [ input
                         [ id "query"
                         , name "query"
-                        , placeholder "Search for blocks, transactions, addresses, particles, etc."
                         , class "form-control form-control-lg text-center mt-2 mb-4"
+                        , placeholder
+                            "Search for blocks, transactions, addresses, particles, etc."
                         , onInput Query
                         , value model.query
                         ]

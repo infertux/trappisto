@@ -18,7 +18,11 @@ suite =
                 \() ->
                     let
                         result =
-                            Decode.decodeString (Address.decodeSearchRawTransactions "Dcur2mcGjmENx4DhNqDctW5wJCVyT3Qeqkx") searchRawTransactionsFixture
+                            Decode.decodeString
+                                (Address.decodeSearchRawTransactions
+                                    "Dcur2mcGjmENx4DhNqDctW5wJCVyT3Qeqkx"
+                                )
+                                searchRawTransactionsFixture
 
                         model =
                             case result of
@@ -33,7 +37,10 @@ suite =
         , describe "Block"
             [ test "decodeGetBlockHash" <|
                 \() ->
-                    Expect.equal (Ok "deadbeef") <| Decode.decodeString Block.decodeGetBlockHash "{\"result\":\"deadbeef\"}"
+                    Expect.equal (Ok "deadbeef") <|
+                        Decode.decodeString
+                            Block.decodeGetBlockHash
+                            "{\"result\":\"deadbeef\"}"
             ]
         , describe "Transaction"
             [ test "decodeGetRawTransaction with a confirmed transaction" <|

@@ -36,7 +36,10 @@ parseError : Http.Error -> Maybe String
 parseError error =
     case error of
         Http.BadStatus response ->
-            Just ("Backend error " ++ toString response.status.code ++ response.status.message)
+            Just <|
+                "Backend error "
+                    ++ toString response.status.code
+                    ++ response.status.message
 
         Http.BadPayload message response ->
             Just <| decodeError response.body
@@ -45,7 +48,12 @@ parseError error =
             Just (toString error)
 
 
-post : String -> Json.Encode.Value -> (Result Http.Error a -> msg) -> Json.Decode.Decoder a -> Cmd msg
+post :
+    String
+    -> Json.Encode.Value
+    -> (Result Http.Error a -> msg)
+    -> Json.Decode.Decoder a
+    -> Cmd msg
 post method params result decoder =
     Http.send result <|
         Http.request <|
