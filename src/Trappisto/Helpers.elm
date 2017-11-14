@@ -4,6 +4,12 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 
 
+type Coin
+    = BCH
+    | BTC
+    | DCR
+
+
 pluralize : Int -> String -> String
 pluralize count singular =
     let
@@ -25,6 +31,21 @@ formatAmount float =
     in
         span [ class "amount" ]
             [ text <| toString rounded ]
+
+
+formatNumber : Int -> String
+formatNumber int =
+    let
+        split digits =
+            if String.length digits > 3 then
+                digits
+                    |> String.dropRight 3
+                    |> split
+                    |> (::) (String.right 3 digits)
+            else
+                [ digits ]
+    in
+        toString int |> split |> List.reverse |> String.join ","
 
 
 shortHash : String -> String

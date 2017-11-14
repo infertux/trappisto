@@ -24,6 +24,12 @@
 
     <script src="assets/js/elm.min.js" async defer></script>
 
+    <script>
+        // CONFIGURE ME:
+        const coin = 'BCH';
+        // TODO: use fuzzy search to guess coin based on hostname?
+    </script>
+
     <style>
       /* inconsolata-regular - latin */
       @font-face {
@@ -58,10 +64,6 @@
         background: orange;
         box-shadow: 0 0 10px 5px orange;
       }
-
-      .amount::after {
-        content: " DCR";
-      }
     </style>
   </head>
   <body class="bg-black text-white">
@@ -70,6 +72,13 @@
       alert('Oops, a JavaScript error occured, please send a screenshot to the website administrator.\nMessage: ' + msg + '\nURL: ' + url + '\nLine: ' + line);
       return false;
     };
+  </script>
+
+  <script>
+    var style = document.createElement('style');
+    style.type = 'text/css';
+    style.innerHTML = '.amount::after { content: " ' + coin + '" };';
+    document.getElementsByTagName('head')[0].appendChild(style);
   </script>
 
   <div class="container-fluid">
@@ -95,7 +104,7 @@
 
     window.addEventListener('load', () => {
       const elmAppDiv = document.querySelector('#elm-app');
-      const elmApp = Elm.Trappisto.embed(elmAppDiv, { coin: 'BTC' });
+      const elmApp = Elm.Trappisto.embed(elmAppDiv, { coin: coin });
 
       elmApp.ports.elmToJs.subscribe((command) => {
         console.log('Received command: ' + command);

@@ -125,7 +125,7 @@ view model =
                     [ pre [ id "logo", class glow ]
                         [ text <|
                             if model.query /= "" then
-                                "Trappisto - Decred Interactive Block Explorer"
+                                "Trappisto - " ++ (toString model.config.coin) ++ " Interactive Block Explorer"
                             else
                                 " ______   _______  _______  _______  _______  ______  \n(  __  \\ (  ____ \\(  ____ \\(  ____ )(  ____ \\(  __  \\ \n| (  \\  )| (    \\/| (    \\/| (    )|| (    \\/| (  \\  )\n| |   ) || (__    | |      | (____)|| (__    | |   ) |\n| |   | ||  __)   | |      |     __)|  __)   | |   | |\n| |   ) || (      | |      | (\\ (   | (      | |   ) |\n| (__/  )| (____/\\| (____/\\| ) \\ \\__| (____/\\| (__/  )\n(______/ (_______/(_______/|/   \\__/(_______/(______/ \n"
                         ]

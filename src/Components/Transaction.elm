@@ -25,11 +25,12 @@ type alias Model =
     , vOut : List VOut
     , fetching : Bool
     , error : Maybe String
+    , coin : Coin
     }
 
 
-initialModel : Model
-initialModel =
+initialModel : Coin -> Model
+initialModel coin =
     { hash = ""
     , type_ = "?"
     , size = -1
@@ -41,11 +42,12 @@ initialModel =
     , vOut = []
     , fetching = False
     , error = Nothing
+    , coin = coin
     }
 
 
-modelFromJson : JsonModel -> Model
-modelFromJson jsonModel =
+modelFromJson : JsonModel -> Coin -> Model
+modelFromJson jsonModel coin =
     { hash = jsonModel.hash
     , type_ = computeType jsonModel
     , size = computeSize jsonModel
@@ -57,6 +59,7 @@ modelFromJson jsonModel =
     , vOut = List.sortBy .value jsonModel.vOut |> List.reverse
     , fetching = False
     , error = Nothing
+    , coin = coin
     }
 
 
@@ -110,13 +113,31 @@ view model =
                     span [] [ text "N/A (unconfirmed)" ]
 
                 ( Just hash, Nothing ) ->
-                    a [ href hash ] [ text hash ]
+                    a [ href hash ] [ text <| shortHash hash ]
 
                 ( Nothing, Just height ) ->
                     a [ href <| toString height ] [ text <| toString height ]
 
                 ( Just hash, Just height ) ->
                     a [ href hash ] [ text <| toString height ]
+
+        formatFees model =
+            case model.coin of
+                DCR ->
+                    [ ( "total sent", Just <| formatAmount (totalSent model) )
+                    , ( "fee"
+                      , Just <|
+                            span []
+                                [ formatAmount (fee model)
+                                , span [] [ text " (" ]
+                                , formatAmount (feePerKb model)
+                                , span [] [ text "/kB)" ]
+                                ]
+                      )
+                    ]
+
+                _ ->
+                    []
 
         formatAddresses scriptPubKey =
             div [] <|
@@ -140,7 +161,14 @@ view model =
                                         "stakebase"
                                     )
                                 ]
-                            , span [ class "float-right" ] [ text <| toString vIn.amountIn ]
+                            , span [ class "float-right" ]
+                                [ text <|
+                                    (if vIn.amountIn > 0 then
+                                        toString vIn.amountIn
+                                     else
+                                        ""
+                                    )
+                                ]
                             , div []
                                 [ (case vIn.txId of
                                     Just hash ->
@@ -168,7 +196,7 @@ view model =
                     )
     in
         div [ class "row" ]
-            [ div [ class "col-8 offset-2" ]
+            [ div [ class "col-12 col-xl-10 offset-xl-1" ]
                 [ div
                     [ class "card bg-dark" ]
                     [ h5 [ class "card-header" ]
@@ -177,33 +205,26 @@ view model =
                         ]
                     , div [ class "card-body" ]
                         [ p [ class "card-text" ]
-                            [ dl [ class "row" ]
-                                [ dt [ class "col-3 text-right" ] [ text "type" ]
-                                , dd [ class "col-9" ]
-                                    [ formatType model.type_ ]
-                                , dt [ class "col-3 text-right" ] [ text "confirmations" ]
-                                , dd [ class "col-9" ]
-                                    [ text <| toString model.confirmations ]
-                                , dt [ class "col-3 text-right" ] [ text "time" ]
-                                , dd [ class "col-9" ]
-                                    [ text <| formatTime model ]
-                                , dt [ class "col-3 text-right" ] [ text "block" ]
-                                , dd [ class "col-9" ]
-                                    [ formatBlock model.blockHash model.blockHeight ]
-                                , dt [ class "col-3 text-right" ] [ text "size" ]
-                                , dd [ class "col-9" ]
-                                    [ text <| toString model.size ++ " bytes" ]
-                                , dt [ class "col-3 text-right" ] [ text "total sent" ]
-                                , dd [ class "col-9" ]
-                                    [ formatAmount (totalSent model) ]
-                                , dt [ class "col-3 text-right" ] [ text "fee" ]
-                                , dd [ class "col-9" ]
-                                    [ formatAmount (fee model)
-                                    , span [] [ text " (" ]
-                                    , formatAmount (feePerKb model)
-                                    , span [] [ text "/kB)" ]
+                            [ dlBuilder <|
+                                List.concat
+                                    [ [ ( "type"
+                                        , Just <| formatType model.type_
+                                        )
+                                      , ( "confirmations"
+                                        , Just <| span [] [ text <| toString model.confirmations ]
+                                        )
+                                      , ( "time"
+                                        , Just <| span [] [ text <| formatTime model ]
+                                        )
+                                      , ( "block"
+                                        , Just <| formatBlock model.blockHash model.blockHeight
+                                        )
+                                      , ( "size"
+                                        , Just <| span [] [ text <| (formatNumber model.size) ++ " bytes" ]
+                                        )
+                                      ]
+                                    , formatFees model
                                     ]
-                                ]
                             ]
                         , hr [] []
                         , div [ class "row" ]
@@ -243,7 +264,7 @@ update msg model =
         GetRawTransactionResult result ->
             case result of
                 Ok jsonModel ->
-                    ( modelFromJson jsonModel, Cmd.none )
+                    ( modelFromJson jsonModel model.coin, Cmd.none )
 
                 Err error ->
                     ( { model
@@ -296,7 +317,7 @@ decodeVIn =
             )
             Nothing
         |> Pipeline.optionalAt [ "coinbase" ] (Decode.maybe Decode.string) Nothing
-        |> Pipeline.optionalAt [ "amountin" ] Decode.float 0
+        |> Pipeline.optionalAt [ "amountin" ] Decode.float -1
         |> Pipeline.optionalAt [ "blockheight" ] (Decode.maybe Decode.int) Nothing
 
 

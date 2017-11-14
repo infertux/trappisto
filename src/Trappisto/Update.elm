@@ -10,6 +10,7 @@ import Components.Status as StatusComponent
 import Components.Address as AddressComponent
 import Components.Block as BlockComponent
 import Components.Transaction as TransactionComponent
+import Trappisto.Helpers as Coin exposing (Coin)
 
 
 port elmToJs : String -> Cmd msg
@@ -18,14 +19,31 @@ port elmToJs : String -> Cmd msg
 port jsToElm : (String -> msg) -> Sub msg
 
 
-init : Config -> Navigation.Location -> ( Model, Cmd Msg )
-init config location =
+init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
+init flags location =
     let
         query =
             extractQuery location
 
+        coin =
+            case flags.coin of
+                "BCH" ->
+                    Coin.BCH
+
+                "BTC" ->
+                    Coin.BTC
+
+                "DCR" ->
+                    Coin.DCR
+
+                _ ->
+                    Debug.crash <|
+                        "Invalid coin: "
+                            ++ flags.coin
+                            ++ " (valid coins are BCH, BTC and DCR)"
+
         model =
-            { initialModel | config = config, query = query }
+            initialModel coin query
 
         ( updatedModel, msg ) =
             if String.isEmpty query then
@@ -82,7 +100,7 @@ update action model =
                     "298e5cc3d985bfe7f81dc135f360abe089edd4396b86d2de66b0cef42b21d980"
 
                 possibleAddress query =
-                    String.length query /= 64 && String.left 1 query == "D"
+                    String.length query /= 64
 
                 -- XXX: Remove a few zeros in the future... 00000000
                 possibleBlockHash query =
@@ -169,20 +187,18 @@ update action model =
                 ( updatedModel, cmd ) =
                     BlockComponent.update blockMsg model.blockModel
 
-                query =
-                    case blockMsg of
-                        BlockComponent.GetBlock foo ->
-                            updatedModel.hash
-
-                        BlockComponent.GetBlockHash foo ->
-                            toString updatedModel.height
-
-                        _ ->
-                            model.query
+                -- query =
+                --     case blockMsg of
+                --         BlockComponent.GetBlock foo ->
+                --             updatedModel.hash
+                --         BlockComponent.GetBlockHash foo ->
+                --             toString updatedModel.height
+                --         _ ->
+                --             model.query
             in
                 ( { model
                     | template = Block
-                    , query = query
+                    , query = updatedModel.hash
                     , blockModel = updatedModel
                   }
                 , Cmd.map BlockMsg cmd

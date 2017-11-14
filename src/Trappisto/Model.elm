@@ -8,10 +8,15 @@ import Components.Status as StatusComponent
 import Components.Address as AddressComponent
 import Components.Block as BlockComponent
 import Components.Transaction as TransactionComponent
+import Trappisto.Helpers exposing (Coin)
+
+
+type alias Flags =
+    { coin : String }
 
 
 type alias Config =
-    { coin : String }
+    { coin : Coin }
 
 
 type Template
@@ -38,16 +43,16 @@ type alias Model =
     }
 
 
-initialModel : Model
-initialModel =
-    { config = Config "BTC"
+initialModel : Coin -> String -> Model
+initialModel coin query =
+    { config = Config coin
     , keys = Keys False False False False False False
     , window = Window.Size 0 0
     , statusModel = StatusComponent.initialModel
-    , addressModel = AddressComponent.initialModel
-    , blockModel = BlockComponent.initialModel
-    , transactionModel = TransactionComponent.initialModel
-    , query = ""
+    , addressModel = AddressComponent.initialModel coin
+    , blockModel = BlockComponent.initialModel coin
+    , transactionModel = TransactionComponent.initialModel coin
+    , query = query
     , template = Status
     , error = Nothing
     , vimMode = False

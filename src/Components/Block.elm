@@ -26,11 +26,12 @@ type alias Model =
     , nextBlockHash : Maybe String
     , fetching : Bool
     , error : Maybe String
+    , coin : Coin
     }
 
 
-initialModel : Model
-initialModel =
+initialModel : Coin -> Model
+initialModel coin =
     { hash = ""
     , height = -1
     , time = -1
@@ -43,6 +44,25 @@ initialModel =
     , nextBlockHash = Nothing
     , fetching = False
     , error = Nothing
+    , coin = coin
+    }
+
+
+modelFromJson : JsonModel -> Coin -> Model
+modelFromJson jsonModel coin =
+    { height = jsonModel.height
+    , hash = jsonModel.hash
+    , time = Time.second * (toFloat jsonModel.time)
+    , confirmations = jsonModel.confirmations
+    , size = jsonModel.size
+    , ticketPrice = jsonModel.ticketPrice
+    , transactions = jsonModel.transactions
+    , tickets = jsonModel.tickets
+    , previousBlockHash = zeroesToNothing jsonModel.previousBlockHash
+    , nextBlockHash = jsonModel.nextBlockHash
+    , fetching = False
+    , error = Nothing
+    , coin = coin
     }
 
 
@@ -70,45 +90,52 @@ type Msg
 view : Model -> Html Msg
 view model =
     let
-        transactions =
-            [ dt [ class "col-3 text-right" ] [ text "stake transactions" ]
-            , dd [ class "col-9" ]
-                ((span [ class "mr-2" ] [ text (toString <| List.length model.tickets) ])
-                    :: (List.map
-                            (\tx ->
-                                a
-                                    [ href tx, class "badge badge-secondary ml-1" ]
-                                    [ text <| shortHash tx ]
-                            )
-                            model.tickets
-                       )
-                )
-            , dt [ class "col-3 text-right" ] [ text "normal transactions" ]
-            , dd [ class "col-9" ]
-                ((span [ class "mr-2" ] [ text (toString <| List.length model.transactions) ])
-                    :: (List.map
-                            (\tx ->
-                                a
-                                    [ href tx, class "badge badge-light ml-1" ]
-                                    [ text <| shortHash tx ]
-                            )
-                            model.transactions
-                       )
-                )
+        sibbling maybeHash html =
+            [ case maybeHash of
+                Nothing ->
+                    span [] []
+
+                Just hash ->
+                    a
+                        [ class "btn btn-secondary"
+                        , href "javascript:void(0)"
+                        , onClick (GetBlock hash)
+                        ]
+                        [ text html ]
             ]
+
+        transactions list color =
+            case list of
+                [] ->
+                    Nothing
+
+                list ->
+                    div []
+                        ((span [ class "mr-2" ] [ text (toString <| List.length list) ])
+                            :: (List.map
+                                    (\tx ->
+                                        a
+                                            [ href tx, class <| "ml-1 badge badge-" ++ color ]
+                                            [ text <| shortHash tx ]
+                                    )
+                                    list
+                               )
+                        )
+                        |> Just
+
+        allTransactions =
+            case model.coin of
+                DCR ->
+                    [ ( "stake transactions", transactions model.tickets "secondary" )
+                    , ( "normal transactions", transactions model.transactions "light" )
+                    ]
+
+                _ ->
+                    [ ( "transactions", transactions model.transactions "light" ) ]
     in
         div [ class "row align-items-center" ]
-            [ div [ class "col-2 text-right" ]
-                [ a
-                    [ class "btn btn-secondary"
-                    , href "javascript:void(0)"
-
-                    -- FIXME: prevblock
-                    , onClick (GetBlock "000000000000006fa9bf10d4a39d0cbc6ef8dc2f2db3e7841fd33b7ad973811a")
-                    ]
-                    [ text "<" ]
-                ]
-            , div [ class "col-8" ]
+            [ div [ class "col-1 text-right" ] (sibbling model.previousBlockHash "<")
+            , div [ class "col-10" ]
                 [ div
                     [ class "card bg-dark" ]
                     [ h5 [ class "card-header" ]
@@ -118,32 +145,36 @@ view model =
                     , div [ class "card-body" ]
                         [ p [ class "card-text" ]
                             [ dlBuilder <|
-                                [ ( "height"
-                                  , Just <|
-                                        span []
-                                            [ text <| toString model.height ]
-                                  )
-                                , ( "time"
-                                  , Just <|
-                                        span []
-                                            [ text <| TimeExtra.toISOString model.time ]
-                                  )
-                                , ( "confirmations"
-                                  , Just <|
-                                        span []
-                                            [ text <| toString model.confirmations ]
-                                  )
-                                , ( "size"
-                                  , Just <|
-                                        span []
-                                            [ text <| toString model.size ++ " bytes" ]
-                                  )
-                                , ( "ticket price", Maybe.map formatAmount model.ticketPrice )
-                                ]
+                                List.concat
+                                    [ [ ( "height"
+                                        , Just <|
+                                            span []
+                                                [ text <| formatNumber model.height ]
+                                        )
+                                      , ( "time"
+                                        , Just <|
+                                            span []
+                                                [ text <| TimeExtra.toISOString model.time ]
+                                        )
+                                      , ( "confirmations"
+                                        , Just <|
+                                            span []
+                                                [ text <| toString model.confirmations ]
+                                        )
+                                      , ( "size"
+                                        , Just <|
+                                            span []
+                                                [ text <| formatNumber model.size ++ " bytes" ]
+                                        )
+                                      , ( "ticket price", Maybe.map formatAmount model.ticketPrice )
+                                      ]
+                                    , allTransactions
+                                    ]
                             ]
                         ]
                     ]
                 ]
+            , div [ class "col-1 text-left" ] (sibbling model.nextBlockHash ">")
             ]
 
 
@@ -167,26 +198,7 @@ update msg model =
         GetBlockResult result ->
             case result of
                 Ok jsonModel ->
-                    let
-                        previousBlockHash =
-                            zeroesToNothing jsonModel.previousBlockHash
-                    in
-                        ( { model
-                            | height = jsonModel.height
-                            , hash = jsonModel.hash
-                            , time = Time.second * (toFloat jsonModel.time)
-                            , confirmations = jsonModel.confirmations
-                            , size = jsonModel.size
-                            , ticketPrice = jsonModel.ticketPrice
-                            , transactions = jsonModel.transactions
-                            , tickets = jsonModel.tickets
-                            , previousBlockHash = previousBlockHash
-                            , nextBlockHash = jsonModel.nextBlockHash
-                            , fetching = False
-                            , error = Nothing
-                          }
-                        , Cmd.none
-                        )
+                    ( modelFromJson jsonModel model.coin, Cmd.none )
 
                 Err error ->
                     ( { model

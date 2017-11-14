@@ -16,26 +16,29 @@ type alias Model =
     , tickets : List String
     , fetching : Bool
     , error : Maybe String
+    , coin : Coin
     }
 
 
-initialModel : Model
-initialModel =
+initialModel : Coin -> Model
+initialModel coin =
     { address = ""
     , transactions = []
     , tickets = []
     , fetching = False
     , error = Nothing
+    , coin = coin
     }
 
 
-modelFromJson : JsonModel -> Model
-modelFromJson jsonModel =
+modelFromJson : JsonModel -> Coin -> Model
+modelFromJson jsonModel coin =
     { address = jsonModel.address
-    , transactions = List.map Transaction.modelFromJson jsonModel.transactions
+    , transactions = List.map (\tx -> Transaction.modelFromJson tx coin) jsonModel.transactions
     , tickets = []
     , fetching = False
     , error = Nothing
+    , coin = coin
     }
 
 
@@ -144,7 +147,7 @@ update msg model =
         SearchRawTransactionsResult result ->
             case result of
                 Ok jsonModel ->
-                    ( modelFromJson jsonModel, Cmd.none )
+                    ( modelFromJson jsonModel model.coin, Cmd.none )
 
                 Err error ->
                     ( { model
