@@ -8,6 +8,7 @@ import Json.Decode as Decode
 import Components.Address as Address
 import Components.Block as Block
 import Components.Transaction as Transaction
+import Trappisto.Helpers as Coin exposing (Coin)
 
 
 suite : Test
@@ -27,7 +28,7 @@ suite =
                         model =
                             case result of
                                 Ok jsonModel ->
-                                    jsonModel |> Address.modelFromJson
+                                    Address.modelFromJson jsonModel Coin.DCR
 
                                 Err error ->
                                     Debug.crash error
@@ -54,7 +55,7 @@ suite =
                         model =
                             case result of
                                 Ok jsonModel ->
-                                    jsonModel |> Transaction.modelFromJson
+                                    Transaction.modelFromJson jsonModel Coin.DCR
 
                                 Err error ->
                                     Debug.crash error

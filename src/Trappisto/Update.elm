@@ -13,7 +13,7 @@ import Components.Transaction as TransactionComponent
 import Trappisto.Helpers as Coin exposing (Coin)
 
 
-port elmToJs : String -> Cmd msg
+port elmToJs : List String -> Cmd msg
 
 
 port jsToElm : (String -> msg) -> Sub msg
@@ -53,7 +53,7 @@ init flags location =
     in
         ( updatedModel
         , Cmd.batch
-            [ elmToJs "focus"
+            [ elmToJs [ "focus" ]
             , msg
             , Task.perform Resize Window.size
             ]
@@ -100,7 +100,7 @@ update action model =
                     "298e5cc3d985bfe7f81dc135f360abe089edd4396b86d2de66b0cef42b21d980"
 
                 possibleAddress query =
-                    String.length query /= 64
+                    String.length query >= 26 && String.length query <= 34
 
                 -- XXX: Remove a few zeros in the future... 00000000
                 possibleBlockHash query =
@@ -238,7 +238,7 @@ update action model =
                         -- don't append "i" when switching back to normal mode
                         | query = String.dropRight 1 updatedModel.query
                       }
-                    , elmToJs "focus"
+                    , elmToJs [ "focus" ]
                     )
                 else if updatedModel.query /= model.query then
                     update (Query updatedModel.query) updatedModel
@@ -352,4 +352,15 @@ newUrl model =
 
 updateUrl : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 updateUrl ( model, cmd ) =
-    ( model, Cmd.batch [ newUrl model, cmd ] )
+    let
+        commands =
+            case model.query of
+                "" ->
+                    [ newUrl model ]
+
+                _ ->
+                    [ newUrl model
+                    , elmToJs [ "title", (toString model.template) ++ " " ++ model.query ]
+                    ]
+    in
+        ( model, Cmd.batch <| commands ++ [ cmd ] )

@@ -39,8 +39,10 @@ type Msg
 view : Model -> Html a
 view model =
     div [ class "col text-center" ]
-        [ span [] [ text "Last block: " ]
-        , a [ href (toString model.blocks) ] [ text <| toString model.blocks ]
+        [ h3 []
+            [ text "Last block: "
+            , a [ href (toString model.blocks) ] [ text <| toString model.blocks ]
+            ]
         ]
 
 

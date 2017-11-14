@@ -142,7 +142,22 @@ update msg model =
                 updatedModel =
                     { model | fetching = True }
             in
-                ( updatedModel, searchRawTransactions updatedModel address )
+                case model.coin of
+                    DCR ->
+                        ( updatedModel, searchRawTransactions updatedModel address )
+
+                    _ ->
+                        ( { model
+                            | error =
+                                Just <|
+                                    "Trappisto does not support Bitcoin addresses "
+                                        ++ "but you can explore this address on "
+                                        ++ "<a target=\"_blank\" href=\"https://blockchair.com/search?q="
+                                        ++ address
+                                        ++ "\">blockchair.com</a>"
+                          }
+                        , Cmd.none
+                        )
 
         SearchRawTransactionsResult result ->
             case result of

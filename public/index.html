@@ -28,6 +28,8 @@
         // CONFIGURE ME:
         const coin = 'BCH';
         // TODO: use fuzzy search to guess coin based on hostname?
+
+        document.title = coin + " blockchain - Trappisto";
     </script>
 
     <style>
@@ -64,6 +66,10 @@
         background: orange;
         box-shadow: 0 0 10px 5px orange;
       }
+
+      .fetching {
+        opacity: 0.5;
+      }
     </style>
   </head>
   <body class="bg-black text-white">
@@ -98,16 +104,17 @@
   <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
 
   <script>
-    //particlesJS.load('particles-js', 'assets/js/particles.json', function() {
-    //  console.log('callback - particles.js config loaded');
-    //});
+    particlesJS.load('particles-js', 'assets/js/particles.json', function() {
+      console.log('callback - particles.js config loaded');
+    });
 
     window.addEventListener('load', () => {
       const elmAppDiv = document.querySelector('#elm-app');
       const elmApp = Elm.Trappisto.embed(elmAppDiv, { coin: coin });
 
-      elmApp.ports.elmToJs.subscribe((command) => {
-        console.log('Received command: ' + command);
+      elmApp.ports.elmToJs.subscribe((params) => {
+        const command = params.shift();
+        console.log('Received command: ' + command, params);
 
         switch (command) {
           case 'focus':
@@ -116,6 +123,10 @@
               query.focus();
               setTimeout(function () { query.select(); }, 50); // delay sightly to allow focus to "stick" before selecting
             }
+            break;
+
+          case 'title':
+            document.title = params[0] + " - " + coin + " blockchain - Trappisto";
             break;
 
           default:

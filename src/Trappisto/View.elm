@@ -3,6 +3,7 @@ module Trappisto.View exposing (view)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Lib.HtmlAttributesExtra as HtmlAttributesExtra
 import Trappisto.Model exposing (..)
 import Components.Status as StatusComponent exposing (view)
 import Components.Address as AddressComponent exposing (view)
@@ -12,7 +13,10 @@ import Components.Transaction as TransactionComponent exposing (view)
 
 isFetching : Model -> Bool
 isFetching model =
-    model.statusModel.fetching || model.blockModel.fetching
+    model.statusModel.fetching
+        || model.addressModel.fetching
+        || model.blockModel.fetching
+        || model.transactionModel.fetching
 
 
 isError : Model -> Bool
@@ -48,8 +52,11 @@ errorView model =
         Just error ->
             div [ class "row" ]
                 [ div [ class "col-6 offset-3" ]
-                    [ div [ class "text-center alert alert-danger" ]
-                        [ text error ]
+                    [ div
+                        [ class "text-center alert alert-danger"
+                        , HtmlAttributesExtra.innerHtml error
+                        ]
+                        []
                     ]
                 ]
 
@@ -113,22 +120,16 @@ transactionView model =
 view : Model -> Html Msg
 view model =
     let
-        glow =
-            if isFetching model then
-                "glow"
-            else
-                ""
-
         header =
             [ div [ class "row" ]
                 [ div [ class "col" ]
-                    [ pre [ id "logo", class glow ]
-                        [ text <|
-                            if model.query /= "" then
-                                "Trappisto - " ++ (toString model.config.coin) ++ " Interactive Block Explorer"
-                            else
+                    [ if model.query /= "" then
+                        span [] []
+                      else
+                        pre [ id "logo", class "text-white" ]
+                            [ text
                                 " ______   _______  _______  _______  _______  ______  \n(  __  \\ (  ____ \\(  ____ \\(  ____ )(  ____ \\(  __  \\ \n| (  \\  )| (    \\/| (    \\/| (    )|| (    \\/| (  \\  )\n| |   ) || (__    | |      | (____)|| (__    | |   ) |\n| |   | ||  __)   | |      |     __)|  __)   | |   | |\n| |   ) || (      | |      | (\\ (   | (      | |   ) |\n| (__/  )| (____/\\| (____/\\| ) \\ \\__| (____/\\| (__/  )\n(______/ (_______/(_______/|/   \\__/(_______/(______/ \n"
-                        ]
+                            ]
                     ]
                 ]
             ]
@@ -184,15 +185,26 @@ view model =
                 ]
             ]
 
-        headerAndContent =
+        headerAndContent model =
             [ div [ class "row text-center" ] [ div [ class "col" ] header ]
-            , div [ class "row" ] [ div [ class "col" ] content ]
+            , div [ class "row" ]
+                [ div
+                    [ class <|
+                        "col"
+                            ++ (if isFetching model then
+                                    " fetching glow"
+                                else
+                                    ""
+                               )
+                    ]
+                    content
+                ]
             ]
 
         sections =
             if model.debug then
-                List.concat [ headerAndContent, debug ]
+                List.concat [ headerAndContent model, debug ]
             else
-                headerAndContent
+                headerAndContent model
     in
         div [ class "row text-white" ] [ div [ class "col" ] sections ]
