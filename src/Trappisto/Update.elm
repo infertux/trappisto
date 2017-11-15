@@ -5,8 +5,10 @@ import Keyboard
 import Task exposing (Task)
 import Time exposing (Time)
 import Window
+import Json.Encode as Encode
+import Json.Decode as Decode
+import Lib.JsonRpc as JsonRpc
 import WebSocket
-import Components.Status as StatusComponent
 import Components.Address as AddressComponent
 import Components.Block as BlockComponent
 import Components.Transaction as TransactionComponent
@@ -19,6 +21,11 @@ port elmToJs : List String -> Cmd msg
 
 
 port jsToElm : (List String -> msg) -> Sub msg
+
+
+webSocketTTL : Time
+webSocketTTL =
+    Time.second * 10
 
 
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
@@ -52,7 +59,7 @@ init flags location =
 
         ( updatedModel, msg ) =
             if String.isEmpty query then
-                update FetchStatus model
+                update GetInfo model
             else
                 update (Query query) model
 
@@ -68,6 +75,7 @@ init flags location =
             , msg
             , notifyBlocks
             , notifyNewTransactions
+            , Task.perform Tick Time.now
             , Task.perform Resize Window.size
             ]
         )
@@ -79,7 +87,7 @@ subscriptions model =
         [ Keyboard.downs (KeyChange True)
         , Keyboard.ups (KeyChange False)
         , Window.resizes Resize
-        , Time.every (Time.second * 60) Tick
+        , Time.every webSocketTTL Tick
         , WebSocket.listen model.wsEndpoint WSMsg
         , jsToElm JsMsg
         ]
@@ -89,14 +97,20 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update action model =
     case action of
         Tick time ->
-            -- let
-            --     -- TODO: ideally we should be able to trigger all updates when
-            --     -- we receive a websocket event and not use polling altogether
-            --     -- ( updatedModel, cmd ) =
-            --     --     update (Query model.query) model
-            -- in
-            --     ( { model | time = time }, notifyBlocks )
-            ( model, Cmd.none )
+            let
+                ping =
+                    Lib.WebSocket.send model.wsEndpoint "session" []
+
+                timeout =
+                    model.time - model.lastWebSocketPong >= webSocketTTL
+
+                updatedModel =
+                    { model
+                        | time = time
+                        , webSocketConnected = not timeout
+                    }
+            in
+                ( updatedModel, ping )
 
         WSMsg message ->
             let
@@ -106,23 +120,25 @@ update action model =
                 connected =
                     Lib.WebSocket.isSuccess message
 
-                status =
-                    model.statusModel
+                lastBlockHeight =
+                    case Lib.WebSocket.newBlock message of
+                        Nothing ->
+                            model.lastBlockHeight
 
-                updatedStatus =
-                    { status | webSocketConnected = connected }
+                        Just height ->
+                            height
+
+                updatedModel =
+                    { model
+                        | webSocketConnected = connected
+                        , lastWebSocketPong = model.time
+                        , lastBlockHeight = lastBlockHeight
+                    }
             in
-                ( { model | statusModel = updatedStatus }, Cmd.none )
+                ( updatedModel, Cmd.none )
 
         NewUrl location ->
             ( { model | query = extractQuery location }, Cmd.none )
-
-        FetchStatus ->
-            let
-                ( updatedModel, cmd ) =
-                    StatusComponent.update StatusComponent.GetInfo model.statusModel
-            in
-                ( { model | statusModel = updatedModel }, Cmd.map StatusMsg cmd )
 
         Query query ->
             let
@@ -152,7 +168,7 @@ update action model =
                     { model | query = query, error = Nothing }
             in
                 if query == "" then
-                    ( { updatedModel | template = Status }
+                    ( { updatedModel | template = Home }
                     , Cmd.none
                     )
                         |> updateUrl
@@ -166,25 +182,38 @@ update action model =
                     fetchBlockByHeight (parseBlockHeight query) updatedModel
                 else
                     ( { updatedModel
-                        | template = Status
+                        | template = Home
                         , error = Just "Not sure what you're looking for :|"
                       }
                     , Cmd.none
                     )
                         |> updateUrl
 
-        StatusMsg statusMsg ->
+        GetInfo ->
             let
-                ( updatedModel, cmd ) =
-                    StatusComponent.update statusMsg model.statusModel
+                updatedModel =
+                    { model | fetching = True }
             in
-                ( { model
-                    | template = Status
-                    , statusModel = updatedModel
-                  }
-                , Cmd.map StatusMsg cmd
-                )
-                    |> updateUrl
+                ( updatedModel, getInfo updatedModel )
+
+        GetInfoResult result ->
+            case result of
+                Ok blocks ->
+                    ( { model
+                        | lastBlockHeight = blocks
+                        , fetching = False
+                        , error = Nothing
+                      }
+                    , Cmd.none
+                    )
+
+                Err error ->
+                    ( { model
+                        | error = JsonRpc.parseError error
+                        , fetching = False
+                      }
+                    , Cmd.none
+                    )
 
         AddressMsg addressMsg ->
             let
@@ -396,3 +425,17 @@ updateUrl ( model, cmd ) =
                     ]
     in
         ( model, Cmd.batch <| commands ++ [ cmd ] )
+
+
+getInfo : Model -> Cmd Msg
+getInfo model =
+    let
+        params =
+            Encode.list []
+    in
+        JsonRpc.post "getinfo" params GetInfoResult decodeStatusFetch
+
+
+decodeStatusFetch : Decode.Decoder Int
+decodeStatusFetch =
+    Decode.at [ "result", "blocks" ] Decode.int

@@ -3,6 +3,7 @@ module Components.Address exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http exposing (Error)
+import Time exposing (Time)
 import Json.Encode as Encode
 import Json.Decode as Decode
 import Lib.JsonRpc as JsonRpc
@@ -55,8 +56,8 @@ type Msg
     | TicketsForAddressResult (Result Http.Error (List String))
 
 
-view : Model -> Html a
-view model =
+view : Model -> Time -> Html a
+view model now =
     let
         details model =
             if missingTransactions model then
@@ -80,11 +81,11 @@ view model =
                 |> List.map
                     (\tx ->
                         tr []
-                            [ td [] [ a [ href tx.hash ] [ text <| shortHash tx.hash ] ]
+                            [ td [] [ queryLink tx.hash (shortHash tx.hash) [] ]
                             , td [] [ text tx.type_ ]
                             , td []
                                 [ Transaction.vInToAddress model.address tx |> formatAmount ]
-                            , td [] [ text <| Transaction.formatTime tx ]
+                            , td [] [ Transaction.formatTime tx now ]
                             , td [] [ text <| toString tx.confirmations ]
                             ]
                     )

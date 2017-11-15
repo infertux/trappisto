@@ -108,8 +108,8 @@ type Msg
     | GetRawTransactionResult (Result Http.Error JsonModel)
 
 
-view : Model -> Html a
-view model =
+view : Model -> Time -> Html a
+view model now =
     let
         formatType type_ =
             span [ class "badge badge badge-success" ] [ text type_ ]
@@ -217,7 +217,7 @@ view model =
                                         , Just <| span [] [ text <| toString model.confirmations ]
                                         )
                                       , ( "time"
-                                        , Just <| span [] [ text <| formatTime model ]
+                                        , Just <| span [] [ formatTime model now ]
                                         )
                                       , ( "block"
                                         , Just <| formatBlock model.blockHash model.blockHeight
@@ -415,14 +415,14 @@ computeVote jsonModel =
 -- "methods" to get info from Model
 
 
-formatTime : Model -> String
-formatTime model =
+formatTime : Model -> Time -> Html msg
+formatTime model now =
     case model.time of
         Nothing ->
-            "recent (unconfirmed)"
+            span [] [ text "recent (unconfirmed)" ]
 
         Just time ->
-            TimeExtra.toISOString time
+            TimeExtra.timeAgo time now
 
 
 vInToAddress : String -> Model -> Float

@@ -5,7 +5,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Lib.HtmlAttributesExtra as HtmlAttributesExtra
 import Trappisto.Model exposing (..)
-import Components.Status as StatusComponent exposing (view)
+import Trappisto.Helpers exposing (..)
 import Components.Address as AddressComponent exposing (view)
 import Components.Block as BlockComponent exposing (view)
 import Components.Transaction as TransactionComponent exposing (view)
@@ -13,7 +13,7 @@ import Components.Transaction as TransactionComponent exposing (view)
 
 isFetching : Model -> Bool
 isFetching model =
-    model.statusModel.fetching
+    model.fetching
         || model.addressModel.fetching
         || model.blockModel.fetching
         || model.transactionModel.fetching
@@ -39,8 +39,8 @@ getError model =
             Block ->
                 model.blockModel.error
 
-            Status ->
-                model.statusModel.error
+            Home ->
+                model.error
 
 
 errorView : Model -> Html Msg
@@ -83,7 +83,7 @@ searchView model =
                     [ class "col-2"
                     , style [ ( "background-color", "rgba(255,255,255,0.5)" ) ]
                     ]
-                    [ (StatusComponent.view model.statusModel) ]
+                    [ statusView model ]
                 ]
 
         vim =
@@ -127,22 +127,48 @@ searchView model =
 
 statusView : Model -> Html Msg
 statusView model =
-    Html.map StatusMsg (StatusComponent.view model.statusModel)
+    let
+        lastBlock =
+            if model.lastBlockHeight < 0 then
+                span [] [ text "??????" ]
+            else
+                queryLink (toString model.lastBlockHeight) (toString model.lastBlockHeight) []
+
+        ( wsClass, wsStatus ) =
+            if model.webSocketConnected then
+                ( "success", "ON" )
+            else
+                ( "danger", "OFF" )
+    in
+        div [ class "text-center" ]
+            [ span
+                [ class "badge badge-info" ]
+                [ h5 []
+                    [ span [] [ text "Last block: " ]
+                    , lastBlock
+                    , br [] []
+                    , span [] [ text "N minutes ago" ]
+                    ]
+                ]
+            , span
+                [ class <| "badge badge-pill badge-" ++ wsClass ]
+                [ text <| "Live updating: " ++ wsStatus ]
+            ]
 
 
 addressView : Model -> Html Msg
 addressView model =
-    Html.map AddressMsg (AddressComponent.view model.addressModel)
+    Html.map AddressMsg (AddressComponent.view model.addressModel model.time)
 
 
 blockView : Model -> Html Msg
 blockView model =
-    Html.map BlockMsg (BlockComponent.view model.blockModel)
+    Html.map BlockMsg (BlockComponent.view model.blockModel model.time)
 
 
 transactionView : Model -> Html Msg
 transactionView model =
-    Html.map TransactionMsg (TransactionComponent.view model.transactionModel)
+    Html.map TransactionMsg (TransactionComponent.view model.transactionModel model.time)
 
 
 view : Model -> Html Msg
@@ -163,7 +189,7 @@ view model =
                 [ searchView model, errorView model ]
             else
                 case model.template of
-                    Status ->
+                    Home ->
                         case model.query of
                             "" ->
                                 [ searchView model, errorView model, ascii ]

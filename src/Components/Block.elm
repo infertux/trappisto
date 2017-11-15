@@ -86,8 +86,8 @@ type Msg
     | GetBlockHashResult (Result Http.Error String)
 
 
-view : Model -> Html Msg
-view model =
+view : Model -> Time -> Html Msg
+view model now =
     let
         sibbling maybeHash direction =
             case maybeHash of
@@ -156,9 +156,7 @@ view model =
                                                 [ text <| formatNumber model.height ]
                                         )
                                       , ( "time"
-                                        , Just <|
-                                            span []
-                                                [ text <| TimeExtra.toISOString model.time ]
+                                        , Just <| TimeExtra.timeAgo model.time now
                                         )
                                       , ( "confirmations"
                                         , Just <|

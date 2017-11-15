@@ -1,31 +1,75 @@
-module Lib.WebSocket exposing (send, isSuccess)
+module Lib.WebSocket exposing (send, isSuccess, newBlock)
 
 import WebSocket
-import Json.Encode
+import Json.Decode as Decode
+import Json.Encode as Encode
 
 
-send : String -> String -> List Json.Encode.Value -> Cmd msg
+send : String -> String -> List Encode.Value -> Cmd msg
 send endpoint method params =
     let
         json =
-            Json.Encode.object
-                [ ( "jsonrpc", Json.Encode.string "2.0" )
-                , ( "id", Json.Encode.int 0 )
-                , ( "method", Json.Encode.string method )
-                , ( "params", Json.Encode.list params )
+            Encode.object
+                [ ( "jsonrpc", Encode.string "1.0" )
+                , ( "id", Encode.int 0 )
+                , ( "method", Encode.string method )
+                , ( "params", Encode.list params )
                 ]
     in
         json
-            |> Json.Encode.encode 0
+            |> Encode.encode 0
             |> WebSocket.send endpoint
 
 
 isSuccess : String -> Bool
 isSuccess jsonString =
-    jsonString == "{\"result\":null,\"error\":null,\"id\":0}"
+    let
+        decoder =
+            Decode.maybe <| Decode.field "error" <| Decode.string
+
+        result =
+            Decode.decodeString decoder jsonString
+    in
+        case result of
+            Err _ ->
+                False
+
+            Ok maybeError ->
+                maybeError == Nothing
+
+
+newBlock : String -> Maybe Int
+newBlock jsonString =
+    if filterMethod [ "blockconnected", "blockdisconnected" ] jsonString then
+        -- decodeNewBlock jsonString
+        Nothing
+    else
+        Nothing
 
 
 
+-- write tests
+
+
+filterMethod : List String -> String -> Bool
+filterMethod methods jsonString =
+    let
+        decoder =
+            Decode.maybe <| Decode.field "method" <| Decode.string
+
+        result =
+            Decode.decodeString decoder jsonString
+    in
+        case result of
+            Err _ ->
+                False
+
+            Ok maybeMethod ->
+                List.any (\method -> Just method == maybeMethod) methods
+
+
+
+-- == "{\"result\":null,\"error\":null,\"id\":0}"
 -- decode : String -> Json.Decode.Decoder Notification
 -- decode jsonString =
 --     Json.Decode.map2 JsonModel

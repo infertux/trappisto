@@ -4,7 +4,7 @@ import Navigation
 import Window
 import Keyboard
 import Time exposing (Time)
-import Components.Status as StatusComponent
+import Http exposing (Error)
 import Components.Address as AddressComponent
 import Components.Block as BlockComponent
 import Components.Transaction as TransactionComponent
@@ -20,7 +20,7 @@ type alias Config =
 
 
 type Template
-    = Status
+    = Home
     | Address
     | Block
     | Transaction
@@ -30,7 +30,6 @@ type alias Model =
     { config : Config
     , keys : Keys
     , window : Window.Size
-    , statusModel : StatusComponent.Model
     , addressModel : AddressComponent.Model
     , blockModel : BlockComponent.Model
     , transactionModel : TransactionComponent.Model
@@ -41,6 +40,10 @@ type alias Model =
     , vimMode : Bool
     , debug : Bool
     , time : Time
+    , lastWebSocketPong : Time
+    , lastBlockHeight : Int
+    , fetching : Bool
+    , webSocketConnected : Bool
     }
 
 
@@ -49,23 +52,25 @@ initialModel coin wsEndpoint query =
     { config = Config coin
     , keys = Keys False False False False False False
     , window = Window.Size 0 0
-    , statusModel = StatusComponent.initialModel
     , addressModel = AddressComponent.initialModel coin
     , blockModel = BlockComponent.initialModel coin
     , transactionModel = TransactionComponent.initialModel coin
     , query = query
-    , template = Status
+    , template = Home
     , error = Nothing
     , wsEndpoint = wsEndpoint
     , vimMode = False
     , debug = False
-    , time = 0
+    , time = -1
+    , lastWebSocketPong = -1
+    , lastBlockHeight = -1
+    , fetching = False
+    , webSocketConnected = False
     }
 
 
 type Msg
     = NewUrl Navigation.Location
-    | StatusMsg StatusComponent.Msg
     | AddressMsg AddressComponent.Msg
     | BlockMsg BlockComponent.Msg
     | TransactionMsg TransactionComponent.Msg
@@ -75,7 +80,8 @@ type Msg
     | Resize Window.Size
     | Tick Time
     | WSMsg String
-    | FetchStatus
+    | GetInfo
+    | GetInfoResult (Result Http.Error Int)
 
 
 type alias Keys =
