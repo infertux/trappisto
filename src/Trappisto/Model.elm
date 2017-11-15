@@ -37,14 +37,15 @@ type alias Model =
     , query : String
     , template : Template
     , error : Maybe String
+    , wsEndpoint : String
     , vimMode : Bool
     , debug : Bool
     , time : Time
     }
 
 
-initialModel : Coin -> String -> Model
-initialModel coin query =
+initialModel : Coin -> String -> String -> Model
+initialModel coin wsEndpoint query =
     { config = Config coin
     , keys = Keys False False False False False False
     , window = Window.Size 0 0
@@ -55,6 +56,7 @@ initialModel coin query =
     , query = query
     , template = Status
     , error = Nothing
+    , wsEndpoint = wsEndpoint
     , vimMode = False
     , debug = False
     , time = 0
@@ -72,6 +74,7 @@ type Msg
     | KeyChange Bool Keyboard.KeyCode
     | Resize Window.Size
     | Tick Time
+    | WSMsg String
     | FetchStatus
 
 

@@ -14,6 +14,7 @@ type alias Model =
     , connections : Int
     , fetching : Bool
     , error : Maybe String
+    , webSocketConnected : Bool
     }
 
 
@@ -23,6 +24,7 @@ initialModel =
     , connections = -1
     , fetching = False
     , error = Nothing
+    , webSocketConnected = False
     }
 
 
@@ -45,6 +47,12 @@ view model =
                 span [] [ text "??????" ]
             else
                 queryLink (toString model.blocks) (toString model.blocks) []
+
+        ( wsClass, wsStatus ) =
+            if model.webSocketConnected then
+                ( "success", "on" )
+            else
+                ( "danger", "off" )
     in
         div []
             [ span
@@ -57,8 +65,8 @@ view model =
                     ]
                 ]
             , span
-                [ class "badge badge-pill badge-danger" ]
-                [ text "Live updating:<br>websocket disconnected" ]
+                [ class <| "badge badge-pill badge-" ++ wsClass ]
+                [ text <| "Live updating: " ++ wsStatus ]
             ]
 
 

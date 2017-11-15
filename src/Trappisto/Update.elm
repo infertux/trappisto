@@ -5,11 +5,13 @@ import Keyboard
 import Task exposing (Task)
 import Time exposing (Time)
 import Window
-import Trappisto.Model exposing (..)
+import WebSocket
 import Components.Status as StatusComponent
 import Components.Address as AddressComponent
 import Components.Block as BlockComponent
 import Components.Transaction as TransactionComponent
+import Lib.WebSocket
+import Trappisto.Model exposing (..)
 import Trappisto.Helpers as Coin exposing (Coin)
 
 
@@ -24,6 +26,9 @@ init flags location =
     let
         query =
             extractQuery location
+
+        wsEndpoint =
+            extractWSEndpoint location
 
         coin =
             case flags.coin of
@@ -43,30 +48,39 @@ init flags location =
                             ++ " (valid coins are BCH, BTC and DCR)"
 
         model =
-            initialModel coin query
+            initialModel coin wsEndpoint query
 
         ( updatedModel, msg ) =
             if String.isEmpty query then
                 update FetchStatus model
             else
                 update (Query query) model
+
+        notifyBlocks =
+            Lib.WebSocket.send model.wsEndpoint "notifyblocks" []
+
+        notifyNewTransactions =
+            Lib.WebSocket.send model.wsEndpoint "notifynewtransactions" []
     in
         ( updatedModel
         , Cmd.batch
             [ elmToJs [ "focus" ]
             , msg
+            , notifyBlocks
+            , notifyNewTransactions
             , Task.perform Resize Window.size
             ]
         )
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions model =
     Sub.batch
         [ Keyboard.downs (KeyChange True)
         , Keyboard.ups (KeyChange False)
         , Window.resizes Resize
         , Time.every (Time.second * 60) Tick
+        , WebSocket.listen model.wsEndpoint WSMsg
         , jsToElm JsMsg
         ]
 
@@ -75,13 +89,30 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update action model =
     case action of
         Tick time ->
+            -- let
+            --     -- TODO: ideally we should be able to trigger all updates when
+            --     -- we receive a websocket event and not use polling altogether
+            --     -- ( updatedModel, cmd ) =
+            --     --     update (Query model.query) model
+            -- in
+            --     ( { model | time = time }, notifyBlocks )
+            ( model, Cmd.none )
+
+        WSMsg message ->
             let
-                -- TODO: ideally we should be able to trigger all updates when
-                -- we receive a websocket event and not use polling altogether
-                ( updatedModel, cmd ) =
-                    update (Query model.query) model
+                _ =
+                    Debug.log "WSMsg" message
+
+                connected =
+                    Lib.WebSocket.isSuccess message
+
+                status =
+                    model.statusModel
+
+                updatedStatus =
+                    { status | webSocketConnected = connected }
             in
-                ( { updatedModel | time = time }, cmd )
+                ( { model | statusModel = updatedStatus }, Cmd.none )
 
         NewUrl location ->
             ( { model | query = extractQuery location }, Cmd.none )
@@ -334,6 +365,16 @@ extractQuery location =
             hash
         else
             pathname
+
+
+extractWSEndpoint : Navigation.Location -> String
+extractWSEndpoint location =
+    String.concat
+        [ "wss://"
+        , location.host
+        , location.pathname
+        , "ws"
+        ]
 
 
 newUrl : Model -> Cmd Msg
