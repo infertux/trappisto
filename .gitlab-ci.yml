@@ -1,9 +1,5 @@
 image: node:latest
 
-cache:
-  paths:
-    - elm-stuff
-
 before_script:
   - export PATH=$PWD/node_modules/.bin:$PATH # we don't have perms to install with -g
   - npm install elm
