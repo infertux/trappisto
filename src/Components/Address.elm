@@ -83,12 +83,7 @@ view model =
                             [ td [] [ a [ href tx.hash ] [ text <| shortHash tx.hash ] ]
                             , td [] [ text tx.type_ ]
                             , td []
-                                [ (Transaction.sentToAddress model.address tx
-                                    |> Maybe.map formatAmount
-                                    |> Maybe.withDefault
-                                        (span [] [ text "?" ])
-                                  )
-                                ]
+                                [ Transaction.vInToAddress model.address tx |> formatAmount ]
                             , td [] [ text <| Transaction.formatTime tx ]
                             , td [] [ text <| toString tx.confirmations ]
                             ]
@@ -242,27 +237,13 @@ totalReceived model =
 
 totalSent : Model -> Maybe Float
 totalSent model =
-    let
-        amounts =
-            List.map (\tx -> Transaction.sentToAddress model.address tx)
-                model.transactions
-
-        unkown =
-            amounts |> List.any (\amount -> amount == Nothing)
-    in
-        if missingTransactions model then
-            Nothing
-        else if unkown then
-            Nothing
-        else
-            amounts
-                |> List.map (\amount -> Maybe.withDefault 0 amount)
-                |> List.sum
-                |> Just
-
-
-
---- FIXME: should not be a Maybe
+    if missingTransactions model then
+        Nothing
+    else
+        model.transactions
+            |> List.map (\tx -> Transaction.vInToAddress model.address tx)
+            |> List.sum
+            |> Just
 
 
 balance : Model -> Maybe Float

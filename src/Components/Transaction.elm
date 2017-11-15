@@ -80,6 +80,13 @@ type alias VIn =
     , coinbase : Maybe String
     , amountIn : Float
     , blockHeight : Maybe Int
+    , prevOut : Maybe PrevOut
+    }
+
+
+type alias PrevOut =
+    { addresses : List String
+    , value : Float
     }
 
 
@@ -315,6 +322,14 @@ decodeVIn =
         |> Pipeline.optionalAt [ "coinbase" ] (Decode.maybe Decode.string) Nothing
         |> Pipeline.optionalAt [ "amountin" ] Decode.float -1
         |> Pipeline.optionalAt [ "blockheight" ] (Decode.maybe Decode.int) Nothing
+        |> Pipeline.optionalAt [ "prevOut" ] (Decode.maybe decodePrevOut) Nothing
+
+
+decodePrevOut : Decode.Decoder PrevOut
+decodePrevOut =
+    Pipeline.decode PrevOut
+        |> Pipeline.requiredAt [ "addresses" ] (Decode.list Decode.string)
+        |> Pipeline.requiredAt [ "value" ] Decode.float
 
 
 decodeVOut : Decode.Decoder VOut
@@ -413,8 +428,15 @@ formatTime model =
 vInToAddress : String -> Model -> Float
 vInToAddress address model =
     model.vIn
-        |> List.filter (\vIn -> vIn.txId /= Nothing)
-        -- FIXME: txId or coinbase?
+        |> List.filter
+            (\vIn ->
+                case vIn.prevOut of
+                    Nothing ->
+                        False
+
+                    Just prevOut ->
+                        List.head prevOut.addresses == Just address
+            )
         |> List.map .amountIn
         |> List.sum
         |> negate
@@ -427,18 +449,6 @@ vOutToAddress address model =
             (\vOut -> Just address == List.head vOut.scriptPubKey.addresses)
         |> List.map .value
         |> List.sum
-
-
-sentToAddress : String -> Model -> Maybe Float
-sentToAddress address model =
-    let
-        outpoint =
-            model.vIn |> List.any (\vIn -> vIn.txId /= Nothing)
-    in
-        if outpoint then
-            Nothing
-        else
-            Just <| vOutToAddress address model
 
 
 totalVIn : Model -> Float
