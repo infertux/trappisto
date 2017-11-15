@@ -5,6 +5,7 @@ import Fuzz exposing (Fuzzer, int, list, string)
 import Test exposing (..)
 import String
 import Json.Decode as Decode
+import Lib.WebSocket as WebSocket
 import Components.Address as Address
 import Components.Block as Block
 import Components.Transaction as Transaction
@@ -92,6 +93,30 @@ suite =
                                     Debug.crash error
                     in
                         Expect.equal "v4" <| Transaction.computeVote jsonModel
+            ]
+        , describe "WebSocket"
+            [ test "isSuccess" <|
+                \() ->
+                    let
+                        connectFixture =
+                            "{\"result\":null,\"error\":null,\"id\":0}"
+
+                        sessionFixture =
+                            "{\"result\":{\"sessionid\":14497963617325762052},\"error\":null,\"id\":0}"
+                    in
+                        List.map (\fixture -> WebSocket.isSuccess fixture)
+                            [ connectFixture, sessionFixture ]
+                            |> Expect.equal [ True, True ]
+            , test "isMethod" <|
+                \() ->
+                    let
+                        blockConnectedFixture =
+                            "{\"jsonrpc\":\"1.0\",\"method\":\"blockconnected\",\"params\":[\"050000003cc1d839eda0a63e40b2103ff9dccc0ce9fc85f35b64c752510000000000000058075ab9a9d12268beaea7ca86f08e06c20672d530a1fead3010c4ddaf0e1a181547f9c847bf2dff1601d0aca79a6a5e1a526c8620a7fa1736dd12d38d1c436f0100f1dfbad173c404000401639f0000b2c2001a21564fce010000005ed80200fe1c00006b330c5a00a22593153298ba57a0006393587581000000000000000000000000000000000000000005000000\",null],\"id\":null}"
+
+                        result =
+                            WebSocket.isMethod [ "blockconnected", "blockdisconnected" ] blockConnectedFixture
+                    in
+                        Expect.equal result True
             ]
         , describe "Fuzz test examples, using randomly generated input"
             -- XXX: keping them as examples

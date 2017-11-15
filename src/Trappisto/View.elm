@@ -79,11 +79,7 @@ searchView model =
                         ]
                         []
                     ]
-                , div
-                    [ class "col-2"
-                    , style [ ( "background-color", "rgba(255,255,255,0.5)" ) ]
-                    ]
-                    [ statusView model ]
+                , div [ class "col-2" ] [ statusView model ]
                 ]
 
         vim =
@@ -97,9 +93,7 @@ searchView model =
         logo model =
             div [ class "row" ]
                 [ div
-                    [ class "col text-center"
-                    , style [ ( "background-color", "rgba(255,255,255,0.5)" ) ]
-                    ]
+                    [ class "col text-center" ]
                     [ a [ href "/" ]
                         [ img
                             [ class
@@ -132,7 +126,7 @@ statusView model =
             if model.lastBlockHeight < 0 then
                 span [] [ text "??????" ]
             else
-                queryLink (toString model.lastBlockHeight) (toString model.lastBlockHeight) []
+                queryLink model.lastBlockHash (toString model.lastBlockHeight) []
 
         ( wsClass, wsStatus ) =
             if model.webSocketConnected then
@@ -142,12 +136,11 @@ statusView model =
     in
         div [ class "text-center" ]
             [ span
-                [ class "badge badge-info" ]
+                [ class "badge badge-dark" ]
                 [ h5 []
-                    [ span [] [ text "Last block: " ]
-                    , lastBlock
+                    [ span [] [ text "Last block:" ]
                     , br [] []
-                    , span [] [ text "N minutes ago" ]
+                    , lastBlock
                     ]
                 ]
             , span
@@ -158,17 +151,17 @@ statusView model =
 
 addressView : Model -> Html Msg
 addressView model =
-    Html.map AddressMsg (AddressComponent.view model.addressModel model.time)
+    Html.map AddressMsg (AddressComponent.view model.addressModel model.now)
 
 
 blockView : Model -> Html Msg
 blockView model =
-    Html.map BlockMsg (BlockComponent.view model.blockModel model.time)
+    Html.map BlockMsg (BlockComponent.view model.blockModel model.now)
 
 
 transactionView : Model -> Html Msg
 transactionView model =
-    Html.map TransactionMsg (TransactionComponent.view model.transactionModel model.time)
+    Html.map TransactionMsg (TransactionComponent.view model.transactionModel model.now)
 
 
 view : Model -> Html Msg

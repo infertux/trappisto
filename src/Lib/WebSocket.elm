@@ -1,4 +1,4 @@
-module Lib.WebSocket exposing (send, isSuccess, newBlock)
+module Lib.WebSocket exposing (send, isSuccess, isMethod)
 
 import WebSocket
 import Json.Decode as Decode
@@ -38,21 +38,8 @@ isSuccess jsonString =
                 maybeError == Nothing
 
 
-newBlock : String -> Maybe Int
-newBlock jsonString =
-    if filterMethod [ "blockconnected", "blockdisconnected" ] jsonString then
-        -- decodeNewBlock jsonString
-        Nothing
-    else
-        Nothing
-
-
-
--- write tests
-
-
-filterMethod : List String -> String -> Bool
-filterMethod methods jsonString =
+isMethod : List String -> String -> Bool
+isMethod methods jsonString =
     let
         decoder =
             Decode.maybe <| Decode.field "method" <| Decode.string
@@ -66,12 +53,3 @@ filterMethod methods jsonString =
 
             Ok maybeMethod ->
                 List.any (\method -> Just method == maybeMethod) methods
-
-
-
--- == "{\"result\":null,\"error\":null,\"id\":0}"
--- decode : String -> Json.Decode.Decoder Notification
--- decode jsonString =
---     Json.Decode.map2 JsonModel
---         (Json.Decode.at [ "result", "blocks" ] Json.Decode.int)
---         (Json.Decode.at [ "result", "connections" ] Json.Decode.int)

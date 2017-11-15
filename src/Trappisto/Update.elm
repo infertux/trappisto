@@ -59,7 +59,7 @@ init flags location =
 
         ( updatedModel, msg ) =
             if String.isEmpty query then
-                update GetInfo model
+                ( model, Cmd.none )
             else
                 update (Query query) model
 
@@ -73,6 +73,7 @@ init flags location =
         , Cmd.batch
             [ elmToJs [ "focus" ]
             , msg
+            , getBestBlock updatedModel
             , notifyBlocks
             , notifyNewTransactions
             , Task.perform Tick Time.now
@@ -96,17 +97,17 @@ subscriptions model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update action model =
     case action of
-        Tick time ->
+        Tick now ->
             let
                 ping =
                     Lib.WebSocket.send model.wsEndpoint "session" []
 
                 timeout =
-                    model.time - model.lastWebSocketPong >= webSocketTTL
+                    model.now - model.lastWebSocketPong >= webSocketTTL
 
                 updatedModel =
                     { model
-                        | time = time
+                        | now = now
                         , webSocketConnected = not timeout
                     }
             in
@@ -120,22 +121,19 @@ update action model =
                 connected =
                     Lib.WebSocket.isSuccess message
 
-                lastBlockHeight =
-                    case Lib.WebSocket.newBlock message of
-                        Nothing ->
-                            model.lastBlockHeight
-
-                        Just height ->
-                            height
-
                 updatedModel =
                     { model
                         | webSocketConnected = connected
-                        , lastWebSocketPong = model.time
-                        , lastBlockHeight = lastBlockHeight
+                        , lastWebSocketPong = model.now
                     }
+
+                cmd =
+                    if Lib.WebSocket.isMethod [ "blockconnected", "blockdisconnected" ] message then
+                        getBestBlock updatedModel
+                    else
+                        Cmd.none
             in
-                ( updatedModel, Cmd.none )
+                ( updatedModel, cmd )
 
         NewUrl location ->
             ( { model | query = extractQuery location }, Cmd.none )
@@ -189,18 +187,19 @@ update action model =
                     )
                         |> updateUrl
 
-        GetInfo ->
+        GetBestBlock ->
             let
                 updatedModel =
                     { model | fetching = True }
             in
-                ( updatedModel, getInfo updatedModel )
+                ( updatedModel, getBestBlock updatedModel )
 
-        GetInfoResult result ->
+        GetBestBlockResult result ->
             case result of
-                Ok blocks ->
+                Ok bestBlock ->
                     ( { model
-                        | lastBlockHeight = blocks
+                        | lastBlockHash = bestBlock.hash
+                        , lastBlockHeight = bestBlock.height
                         , fetching = False
                         , error = Nothing
                       }
@@ -427,15 +426,17 @@ updateUrl ( model, cmd ) =
         ( model, Cmd.batch <| commands ++ [ cmd ] )
 
 
-getInfo : Model -> Cmd Msg
-getInfo model =
+getBestBlock : Model -> Cmd Msg
+getBestBlock model =
     let
         params =
             Encode.list []
     in
-        JsonRpc.post "getinfo" params GetInfoResult decodeStatusFetch
+        JsonRpc.post "getbestblock" params GetBestBlockResult decodeGetBestBlock
 
 
-decodeStatusFetch : Decode.Decoder Int
-decodeStatusFetch =
-    Decode.at [ "result", "blocks" ] Decode.int
+decodeGetBestBlock : Decode.Decoder BestBlock
+decodeGetBestBlock =
+    Decode.map2 BestBlock
+        (Decode.at [ "result", "hash" ] Decode.string)
+        (Decode.at [ "result", "height" ] Decode.int)

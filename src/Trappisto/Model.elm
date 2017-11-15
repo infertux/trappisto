@@ -39,8 +39,9 @@ type alias Model =
     , wsEndpoint : String
     , vimMode : Bool
     , debug : Bool
-    , time : Time
+    , now : Time
     , lastWebSocketPong : Time
+    , lastBlockHash : String
     , lastBlockHeight : Int
     , fetching : Bool
     , webSocketConnected : Bool
@@ -61,8 +62,9 @@ initialModel coin wsEndpoint query =
     , wsEndpoint = wsEndpoint
     , vimMode = False
     , debug = False
-    , time = -1
+    , now = -1
     , lastWebSocketPong = -1
+    , lastBlockHash = ""
     , lastBlockHeight = -1
     , fetching = False
     , webSocketConnected = False
@@ -80,8 +82,12 @@ type Msg
     | Resize Window.Size
     | Tick Time
     | WSMsg String
-    | GetInfo
-    | GetInfoResult (Result Http.Error Int)
+    | GetBestBlock
+    | GetBestBlockResult (Result Http.Error BestBlock)
+
+
+type alias BestBlock =
+    { hash : String, height : Int }
 
 
 type alias Keys =
