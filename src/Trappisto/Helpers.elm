@@ -2,6 +2,7 @@ module Trappisto.Helpers exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Lib.HtmlAttributesExtra as HtmlAttributesExtra
 
 
 type Coin
@@ -22,7 +23,7 @@ pluralize count singular =
             phrase ++ "s"
 
 
-formatAmount : Float -> Html a
+formatAmount : Float -> Html msg
 formatAmount float =
     let
         rounded =
@@ -53,7 +54,7 @@ shortHash hash =
     String.concat [ String.left 2 hash, "...", String.right 2 hash ]
 
 
-dlBuilder : List ( String, Maybe (Html a) ) -> Html a
+dlBuilder : List ( String, Maybe (Html msg) ) -> Html msg
 dlBuilder list =
     let
         filter ( label, value ) =
@@ -70,10 +71,22 @@ dlBuilder list =
         dl [ class "row" ] (List.concat <| List.filterMap filter list)
 
 
-dcrDataLink : String -> Html a
+queryLink : String -> String -> List (Attribute msg) -> Html msg
+queryLink query label attributes =
+    let
+        hrefAttribute =
+            href <| "javascript:query('" ++ query ++ "')"
+
+        innerHtml =
+            HtmlAttributesExtra.innerHtml label
+    in
+        a (List.concat [ attributes, [ hrefAttribute, innerHtml ] ]) []
+
+
+dcrDataLink : String -> Html msg
 dcrDataLink path =
     a
-        [ class "float-right"
+        [ class "btn btn-secondary float-right"
         , target "_blank"
         , title "Open on dcrdata.org"
         , href <| "https://explorer.dcrdata.org/explorer/" ++ path

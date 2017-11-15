@@ -95,7 +95,7 @@ view model =
                     )
     in
         div [ class "row" ]
-            [ div [ class "col-8 offset-2" ]
+            [ div [ class "col" ]
                 [ div [ class "card bg-dark" ]
                     [ h5 [ class "card-header" ]
                         [ span [] [ text <| "Address " ++ model.address ]
@@ -109,14 +109,14 @@ view model =
                                 [ h4 [ class "text-center" ]
                                     [ span [ class "badge badge-pill badge-info" ]
                                         [ text <|
-                                            toString (List.length model.transactions)
-                                                ++ " transactions"
+                                            pluralize (List.length model.transactions)
+                                                "transaction"
                                         ]
                                     ]
                                 , table [ class "table table-dark table-striped" ]
                                     [ thead []
                                         [ tr []
-                                            [ th [] [ text "ID" ]
+                                            [ th [] [ text "hash" ]
                                             , th [] [ text "type" ]
                                             , th [] [ text "credit" ]
                                             , th [] [ text "time" ]
@@ -221,7 +221,7 @@ decodeSearchRawTransactions address =
 
 maxTransactionCount : Int
 maxTransactionCount =
-    50
+    500
 
 
 missingTransactions : Model -> Bool

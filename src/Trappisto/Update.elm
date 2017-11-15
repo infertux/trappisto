@@ -16,7 +16,7 @@ import Trappisto.Helpers as Coin exposing (Coin)
 port elmToJs : List String -> Cmd msg
 
 
-port jsToElm : (String -> msg) -> Sub msg
+port jsToElm : (List String -> msg) -> Sub msg
 
 
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
@@ -100,12 +100,18 @@ update action model =
                     "298e5cc3d985bfe7f81dc135f360abe089edd4396b86d2de66b0cef42b21d980"
 
                 possibleAddress query =
-                    String.length query >= 26 && String.length query <= 34
+                    String.length query >= 26 && String.length query <= 35
 
                 -- XXX: Remove a few zeros in the future... 00000000
                 possibleBlockHash query =
                     (String.length query == 64 && String.left 8 query == "00000000")
                         || (query == genesis)
+
+                parseBlockHeight string =
+                    String.toInt string |> Result.toMaybe |> Maybe.withDefault -1
+
+                possibleBlockHeight query =
+                    parseBlockHeight query /= -1
 
                 possibleTransaction query =
                     (String.length query == 64 && String.left 8 query /= "00000000")
@@ -125,27 +131,7 @@ update action model =
                     fetchBlockByHash query updatedModel
                 else if possibleAddress query then
                     fetchAddress query updatedModel
-                else
-                    ( { updatedModel
-                        | template = Status
-                        , error = Just "Not sure what you're looking for :|"
-                      }
-                    , Cmd.none
-                    )
-                        |> updateUrl
-
-        QueryForce query ->
-            let
-                parseBlockHeight string =
-                    String.toInt string |> Result.toMaybe |> Maybe.withDefault -1
-
-                possibleBlockHeight query =
-                    parseBlockHeight query /= -1
-
-                updatedModel =
-                    { model | query = query, error = Nothing }
-            in
-                if possibleBlockHeight query then
+                else if possibleBlockHeight query then
                     fetchBlockByHeight (parseBlockHeight query) updatedModel
                 else
                     ( { updatedModel
@@ -219,8 +205,13 @@ update action model =
                 )
                     |> updateUrl
 
-        JsMsg _ ->
-            ( model, Cmd.none )
+        JsMsg params ->
+            case params of
+                [ "query", query ] ->
+                    update (Query query) model
+
+                _ ->
+                    Debug.crash <| "WTF? " ++ toString params
 
         KeyChange bool code ->
             let
@@ -243,7 +234,7 @@ update action model =
                 else if updatedModel.query /= model.query then
                     update (Query updatedModel.query) updatedModel
                 else if keys.enter then
-                    update (QueryForce updatedModel.query) updatedModel
+                    update (Query updatedModel.query) updatedModel
                 else
                     ( updatedModel, Cmd.none )
 

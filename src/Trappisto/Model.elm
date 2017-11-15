@@ -67,9 +67,8 @@ type Msg
     | AddressMsg AddressComponent.Msg
     | BlockMsg BlockComponent.Msg
     | TransactionMsg TransactionComponent.Msg
-    | JsMsg String
+    | JsMsg (List String)
     | Query String
-    | QueryForce String
     | KeyChange Bool Keyboard.KeyCode
     | Resize Window.Size
     | Tick Time

@@ -64,9 +64,10 @@ errorView model =
 searchView : Model -> Html Msg
 searchView model =
     let
-        search =
-            div [ class "row" ]
-                [ div [ class "col-8 offset-2" ]
+        search model =
+            div [ class "row align-items-center" ]
+                [ div [ class "col-2" ] [ logo model ]
+                , div [ class "col-8" ]
                     [ input
                         [ id "query"
                         , name "query"
@@ -78,6 +79,11 @@ searchView model =
                         ]
                         []
                     ]
+                , div
+                    [ class "col-2"
+                    , style [ ( "background-color", "rgba(255,255,255,0.5)" ) ]
+                    ]
+                    [ (StatusComponent.view model.statusModel) ]
                 ]
 
         vim =
@@ -88,11 +94,33 @@ searchView model =
                     ]
                 ]
 
+        logo model =
+            div [ class "row" ]
+                [ div
+                    [ class "col text-center"
+                    , style [ ( "background-color", "rgba(255,255,255,0.5)" ) ]
+                    ]
+                    [ a [ href "/" ]
+                        [ img
+                            [ class
+                                (if isFetching model then
+                                    "rotate"
+                                 else
+                                    ""
+                                )
+                            , src "assets/images/decred.png"
+                            , alt "logo"
+                            ]
+                            []
+                        ]
+                    ]
+                ]
+
         view =
             if model.vimMode then
-                [ search, vim ]
+                [ search model, vim ]
             else
-                [ search ]
+                [ search model ]
     in
         div [ class "row" ] [ div [ class "col" ] view ]
 
@@ -120,22 +148,15 @@ transactionView model =
 view : Model -> Html Msg
 view model =
     let
-        header =
-            [ div [ class "row" ]
+        ascii =
+            div [ class "row text-center mt-3" ]
                 [ div [ class "col" ]
-                    [ if model.query /= "" then
-                        span [] []
-                      else
-                        pre [ id "logo", class "text-white" ]
-                            [ text
-                                " ______   _______  _______  _______  _______  ______  \n(  __  \\ (  ____ \\(  ____ \\(  ____ )(  ____ \\(  __  \\ \n| (  \\  )| (    \\/| (    \\/| (    )|| (    \\/| (  \\  )\n| |   ) || (__    | |      | (____)|| (__    | |   ) |\n| |   | ||  __)   | |      |     __)|  __)   | |   | |\n| |   ) || (      | |      | (\\ (   | (      | |   ) |\n| (__/  )| (____/\\| (____/\\| ) \\ \\__| (____/\\| (__/  )\n(______/ (_______/(_______/|/   \\__/(_______/(______/ \n"
-                            ]
+                    [ pre [ id "logo", class "text-white" ]
+                        [ text
+                            " ______   _______  _______  _______  _______  ______  \n(  __  \\ (  ____ \\(  ____ \\(  ____ )(  ____ \\(  __  \\ \n| (  \\  )| (    \\/| (    \\/| (    )|| (    \\/| (  \\  )\n| |   ) || (__    | |      | (____)|| (__    | |   ) |\n| |   | ||  __)   | |      |     __)|  __)   | |   | |\n| |   ) || (      | |      | (\\ (   | (      | |   ) |\n| (__/  )| (____/\\| (____/\\| ) \\ \\__| (____/\\| (__/  )\n(______/ (_______/(_______/|/   \\__/(_______/(______/ \n"
+                        ]
                     ]
                 ]
-            ]
-
-        status model =
-            div [ class "row" ] [ statusView model ]
 
         content =
             if model.error /= Nothing then
@@ -143,13 +164,18 @@ view model =
             else
                 case model.template of
                     Status ->
-                        if model.query == "particles" then
-                            [ div [ class "row" ]
-                                [ div [ class "col" ] [ text "Reticulating splines..." ]
+                        case model.query of
+                            "" ->
+                                [ searchView model, errorView model, ascii ]
+
+                            "particles" ->
+                                [ div [ class "row" ]
+                                    [ div [ class "col" ] [ text "Reticulating splines..." ]
+                                    ]
                                 ]
-                            ]
-                        else
-                            [ searchView model, errorView model, status model ]
+
+                            _ ->
+                                [ searchView model, errorView model ]
 
                     Address ->
                         if isError model then
@@ -169,6 +195,27 @@ view model =
                         else
                             [ searchView model, transactionView model ]
 
+        wrapper model =
+            [ div [ class "row" ]
+                [ div
+                    [ class <|
+                        "col"
+                            ++ (if isFetching model then
+                                    " fetching"
+                                else
+                                    ""
+                               )
+                    ]
+                    content
+                ]
+            ]
+
+        sections =
+            if model.debug then
+                List.concat [ wrapper model, debug ]
+            else
+                wrapper model
+
         debug =
             [ hr [] []
             , div [ class "row" ]
@@ -184,27 +231,5 @@ view model =
                     ]
                 ]
             ]
-
-        headerAndContent model =
-            [ div [ class "row text-center" ] [ div [ class "col" ] header ]
-            , div [ class "row" ]
-                [ div
-                    [ class <|
-                        "col"
-                            ++ (if isFetching model then
-                                    " fetching glow"
-                                else
-                                    ""
-                               )
-                    ]
-                    content
-                ]
-            ]
-
-        sections =
-            if model.debug then
-                List.concat [ headerAndContent model, debug ]
-            else
-                headerAndContent model
     in
         div [ class "row text-white" ] [ div [ class "col" ] sections ]

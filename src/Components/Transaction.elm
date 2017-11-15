@@ -113,13 +113,13 @@ view model =
                     span [] [ text "N/A (unconfirmed)" ]
 
                 ( Just hash, Nothing ) ->
-                    a [ href hash ] [ text <| shortHash hash ]
+                    queryLink hash (shortHash hash) []
 
                 ( Nothing, Just height ) ->
-                    a [ href <| toString height ] [ text <| toString height ]
+                    queryLink (toString height) (toString height) []
 
                 ( Just hash, Just height ) ->
-                    a [ href hash ] [ text <| toString height ]
+                    queryLink hash (toString height) []
 
         formatFees model =
             case model.coin of
@@ -142,7 +142,7 @@ view model =
         formatAddresses scriptPubKey =
             div [] <|
                 (List.map
-                    (\address -> div [] [ a [ href address ] [ text address ] ])
+                    (\address -> div [] [ queryLink address address [] ])
                     scriptPubKey.addresses
                 )
 
@@ -162,19 +162,15 @@ view model =
                                     )
                                 ]
                             , span [ class "float-right" ]
-                                [ text <|
-                                    (if vIn.amountIn > 0 then
-                                        toString vIn.amountIn
-                                     else
-                                        ""
-                                    )
+                                [ if vIn.amountIn > 0 then
+                                    formatAmount vIn.amountIn
+                                  else
+                                    span [] []
                                 ]
                             , div []
                                 [ (case vIn.txId of
                                     Just hash ->
-                                        a
-                                            [ href hash ]
-                                            [ text <| "Transaction " ++ shortHash hash ]
+                                        queryLink hash ("Transaction " ++ shortHash hash) []
 
                                     Nothing ->
                                         span [] []
@@ -196,7 +192,7 @@ view model =
                     )
     in
         div [ class "row" ]
-            [ div [ class "col-12 col-xl-10 offset-xl-1" ]
+            [ div [ class "col" ]
                 [ div
                     [ class "card bg-dark" ]
                     [ h5 [ class "card-header" ]
@@ -349,8 +345,7 @@ computeType : JsonModel -> String
 computeType jsonModel =
     let
         hasVOutType type_ jsonModel =
-            List.map (\i -> i.scriptPubKey.type_) jsonModel.vOut
-                |> List.member type_
+            List.any (\i -> i.scriptPubKey.type_ == type_) jsonModel.vOut
     in
         --- XXX: simplified detection
         --- full rules can be found in dcrd/blockchain/stake/staketx.go

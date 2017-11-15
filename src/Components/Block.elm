@@ -2,7 +2,6 @@ module Components.Block exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (..)
 import Http exposing (Error)
 import Json.Encode as Encode
 import Json.Decode as Decode
@@ -90,19 +89,22 @@ type Msg
 view : Model -> Html Msg
 view model =
     let
-        sibbling maybeHash html =
-            [ case maybeHash of
+        sibbling maybeHash direction =
+            case maybeHash of
                 Nothing ->
                     span [] []
 
                 Just hash ->
-                    a
-                        [ class "btn btn-secondary"
-                        , href "javascript:void(0)"
-                        , onClick (GetBlock hash)
-                        ]
-                        [ text html ]
-            ]
+                    let
+                        ( label, classes ) =
+                            if direction == "right" then
+                                ( "Next block", " float-right ml-2" )
+                            else
+                                ( "Previous block", "" )
+                    in
+                        queryLink hash
+                            ("<span class=\"oi oi-chevron-" ++ direction ++ "\"></span>")
+                            [ class <| "btn btn-secondary" ++ classes, title label ]
 
         transactions list color =
             case list of
@@ -114,9 +116,9 @@ view model =
                         ((span [ class "mr-2" ] [ text (toString <| List.length list) ])
                             :: (List.map
                                     (\tx ->
-                                        a
-                                            [ href tx, class <| "ml-1 badge badge-" ++ color ]
-                                            [ text <| shortHash tx ]
+                                        queryLink tx
+                                            (shortHash tx)
+                                            [ class <| "ml-1 badge badge-" ++ color ]
                                     )
                                     list
                                )
@@ -127,19 +129,21 @@ view model =
             case model.coin of
                 DCR ->
                     [ ( "stake transactions", transactions model.tickets "secondary" )
-                    , ( "normal transactions", transactions model.transactions "light" )
+                    , ( "regular transactions", transactions model.transactions "light" )
                     ]
 
                 _ ->
                     [ ( "transactions", transactions model.transactions "light" ) ]
     in
         div [ class "row align-items-center" ]
-            [ div [ class "col-1 text-right" ] (sibbling model.previousBlockHash "<")
-            , div [ class "col-10" ]
+            [ div [ class "col" ]
                 [ div
                     [ class "card bg-dark" ]
                     [ h5 [ class "card-header" ]
-                        [ span [] [ text <| "Block " ++ model.hash ]
+                        [ sibbling model.previousBlockHash "left"
+                        , span [ class "ml-4" ]
+                            [ text <| "Block " ++ model.hash ]
+                        , sibbling model.nextBlockHash "right"
                         , dcrDataLink <| "block/" ++ model.hash
                         ]
                     , div [ class "card-body" ]
@@ -159,7 +163,7 @@ view model =
                                       , ( "confirmations"
                                         , Just <|
                                             span []
-                                                [ text <| toString model.confirmations ]
+                                                [ text <| formatNumber model.confirmations ]
                                         )
                                       , ( "size"
                                         , Just <|
@@ -174,7 +178,6 @@ view model =
                         ]
                     ]
                 ]
-            , div [ class "col-1 text-left" ] (sibbling model.nextBlockHash ">")
             ]
 
 

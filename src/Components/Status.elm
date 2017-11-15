@@ -6,6 +6,7 @@ import Http exposing (Error)
 import Json.Encode
 import Json.Decode
 import Lib.JsonRpc as JsonRpc
+import Trappisto.Helpers exposing (..)
 
 
 type alias Model =
@@ -38,12 +39,27 @@ type Msg
 
 view : Model -> Html a
 view model =
-    div [ class "col text-center" ]
-        [ h3 []
-            [ text "Last block: "
-            , a [ href (toString model.blocks) ] [ text <| toString model.blocks ]
+    let
+        block =
+            if model.blocks < 0 then
+                span [] [ text "??????" ]
+            else
+                queryLink (toString model.blocks) (toString model.blocks) []
+    in
+        div []
+            [ span
+                [ class "badge badge-info" ]
+                [ h5 []
+                    [ span [] [ text "Last block: " ]
+                    , block
+                    , br [] []
+                    , span [] [ text "N minutes ago" ]
+                    ]
+                ]
+            , span
+                [ class "badge badge-pill badge-danger" ]
+                [ text "Live updating:<br>websocket disconnected" ]
             ]
-        ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
