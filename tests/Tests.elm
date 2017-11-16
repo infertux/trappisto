@@ -9,9 +9,17 @@ import Lib.WebSocket as WebSocket
 import Components.Address as Address
 import Components.Block as Block
 import Components.Transaction as Transaction
+import Trappisto.Config as Config
 import Trappisto.Model exposing (..)
-import Trappisto.Update
-import Trappisto.Helpers as Coin exposing (Coin)
+import Trappisto.Decoder as Decoder
+
+
+testConfig : Config.Config
+testConfig =
+    { coin = Config.DCR
+    , rpcEndpoint = "https://localhost.test:8000/rpc"
+    , wsEndpoint = "wss://localhost.test:8000/ws"
+    }
 
 
 suite : Test
@@ -31,7 +39,7 @@ suite =
                         model =
                             case result of
                                 Ok jsonModel ->
-                                    Address.modelFromJson jsonModel Coin.DCR
+                                    Address.modelFromJson jsonModel testConfig
 
                                 Err error ->
                                     Debug.crash error
@@ -58,7 +66,9 @@ suite =
                         model =
                             case result of
                                 Ok jsonModel ->
-                                    Transaction.modelFromJson jsonModel Coin.DCR
+                                    Transaction.modelFromJson
+                                        jsonModel
+                                        testConfig
 
                                 Err error ->
                                     Debug.crash error
@@ -96,6 +106,22 @@ suite =
                     in
                         Expect.equal "v4" <| Transaction.computeVote jsonModel
             ]
+        , describe "Decoder"
+            [ test "decodeTxAccepted" <|
+                \() ->
+                    let
+                        txAcceptedFixture =
+                            "{\"jsonrpc\":\"1.0\",\"method\":\"txaccepted\",\"params\":[\"e943704526165772229307a3e2406f5805160a9a0d33d702691044daef0ecbb2\",72.31055621],\"id\":null}"
+
+                        maybeTransaction =
+                            Decoder.decodeTxAccepted txAcceptedFixture
+                    in
+                        Expect.equal maybeTransaction <|
+                            Just <|
+                                BasicTransaction
+                                    "e943704526165772229307a3e2406f5805160a9a0d33d702691044daef0ecbb2"
+                                    72.31055621
+            ]
         , describe "WebSocket"
             [ test "isSuccess" <|
                 \() ->
@@ -129,27 +155,6 @@ suite =
                             WebSocket.isMethod [ "txaccepted" ] txAcceptedFixture
                     in
                         Expect.equal result True
-            , test "decodeTxAccepted" <|
-                \() ->
-                    let
-                        txAcceptedFixture =
-                            "{\"jsonrpc\":\"1.0\",\"method\":\"txaccepted\",\"params\":[\"e943704526165772229307a3e2406f5805160a9a0d33d702691044daef0ecbb2\",72.31055621],\"id\":null}"
-
-                        result =
-                            Trappisto.Update.decodeTxAccepted txAcceptedFixture
-
-                        model =
-                            case result of
-                                Ok model ->
-                                    model
-
-                                Err error ->
-                                    Debug.crash error
-                    in
-                        Expect.equal model <|
-                            BasicTransaction
-                                "e943704526165772229307a3e2406f5805160a9a0d33d702691044daef0ecbb2"
-                                72.31055621
             ]
         , describe "Fuzz test examples, using randomly generated input"
             -- XXX: keping them as examples

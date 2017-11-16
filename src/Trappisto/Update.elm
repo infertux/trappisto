@@ -5,16 +5,14 @@ import Keyboard
 import Task exposing (Task)
 import Time exposing (Time)
 import Window
-import Json.Encode as Encode
-import Json.Decode as Decode
 import Lib.JsonRpc as JsonRpc
-import WebSocket
+import Lib.WebSocket as WebSocket
 import Components.Address as AddressComponent
 import Components.Block as BlockComponent
 import Components.Transaction as TransactionComponent
-import Lib.WebSocket
+import Trappisto.Config as Config
 import Trappisto.Model exposing (..)
-import Trappisto.Helpers as Coin exposing (Coin)
+import Trappisto.Decoder as Decoder
 
 
 port elmToJs : List String -> Cmd msg
@@ -23,39 +21,20 @@ port elmToJs : List String -> Cmd msg
 port jsToElm : (List String -> msg) -> Sub msg
 
 
-webSocketTTL : Time
-webSocketTTL =
-    Time.second * 10
-
-
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
 init flags location =
     let
+        config =
+            { coin = extractCoin flags
+            , rpcEndpoint = extractRPCEndpoint location
+            , wsEndpoint = extractWSEndpoint location
+            }
+
         query =
             extractQuery location
 
-        wsEndpoint =
-            extractWSEndpoint location
-
-        coin =
-            case flags.coin of
-                "BCH" ->
-                    Coin.BCH
-
-                "BTC" ->
-                    Coin.BTC
-
-                "DCR" ->
-                    Coin.DCR
-
-                _ ->
-                    Debug.crash <|
-                        "Invalid coin: "
-                            ++ flags.coin
-                            ++ " (valid coins are BCH, BTC and DCR)"
-
         model =
-            initialModel coin wsEndpoint query
+            initialModel config query
 
         ( updatedModel, msg ) =
             if String.isEmpty query then
@@ -64,10 +43,10 @@ init flags location =
                 update (Query query) model
 
         notifyBlocks =
-            Lib.WebSocket.send model.wsEndpoint "notifyblocks" []
+            WebSocket.send model.config.wsEndpoint "notifyblocks" []
 
         notifyNewTransactions =
-            Lib.WebSocket.send model.wsEndpoint "notifynewtransactions" []
+            WebSocket.send model.config.wsEndpoint "notifynewtransactions" []
     in
         ( updatedModel
         , Cmd.batch
@@ -89,7 +68,7 @@ subscriptions model =
         , Keyboard.ups (KeyChange False)
         , Window.resizes Resize
         , Time.every webSocketTTL Tick
-        , WebSocket.listen model.wsEndpoint WSMsg
+        , WebSocket.listen model.config.wsEndpoint WebSocketMsg
         , jsToElm JsMsg
         ]
 
@@ -100,7 +79,7 @@ update action model =
         Tick now ->
             let
                 ping =
-                    Lib.WebSocket.send model.wsEndpoint "session" []
+                    WebSocket.send model.config.wsEndpoint "session" []
 
                 timeout =
                     model.now - model.lastWebSocketPong >= webSocketTTL
@@ -113,17 +92,16 @@ update action model =
             in
                 ( updatedModel, ping )
 
-        WSMsg message ->
+        WebSocketMsg message ->
             let
-                _ =
-                    Debug.log "WSMsg" message
-
+                -- _ =
+                --     Debug.log "WebSocketMsg" message
                 connected =
-                    Lib.WebSocket.isSuccess message
+                    WebSocket.isSuccess message
 
                 txAccepted =
-                    if Lib.WebSocket.isMethod [ "txaccepted" ] message then
-                        decodeTxAccepted message
+                    if WebSocket.isMethod [ "txaccepted" ] message then
+                        Decoder.decodeTxAccepted message
                     else
                         Nothing
 
@@ -143,8 +121,12 @@ update action model =
                     }
 
                 cmd =
-                    if Lib.WebSocket.isMethod [ "blockconnected", "blockdisconnected" ] message then
-                        getBestBlock updatedModel
+                    if WebSocket.isMethod [ "blockconnected", "blockdisconnected" ] message then
+                        Cmd.batch
+                            [ getBestBlock updatedModel
+                            , update (Query updatedModel.query) updatedModel
+                                |> Tuple.second
+                            ]
                     else
                         Cmd.none
             in
@@ -177,6 +159,9 @@ update action model =
                     (String.length query == 64 && String.left 8 query /= "00000000")
                         && (query /= genesis)
 
+                easterEgg query =
+                    query == "particles"
+
                 updatedModel =
                     { model | query = query, error = Nothing }
             in
@@ -193,6 +178,8 @@ update action model =
                     fetchAddress query updatedModel
                 else if possibleBlockHeight query then
                     fetchBlockByHeight (parseBlockHeight query) updatedModel
+                else if easterEgg query then
+                    ( updatedModel, elmToJs [ "particles" ] )
                 else
                     ( { updatedModel
                         | template = Home
@@ -202,7 +189,7 @@ update action model =
                     )
                         |> updateUrl
 
-        GetBestBlock ->
+        GetBestBlockx ->
             let
                 updatedModel =
                     { model | fetching = True }
@@ -290,7 +277,7 @@ update action model =
         KeyChange bool code ->
             let
                 keys =
-                    decodeKeys bool code model.keys
+                    Decoder.decodeKeys bool code model.keys
 
                 updatedModel =
                     { model | keys = keys } |> handleKeys keys
@@ -336,63 +323,50 @@ fetchTransaction hash model =
     update (TransactionMsg (TransactionComponent.GetRawTransaction hash)) model
 
 
-decodeKeys : Bool -> Keyboard.KeyCode -> Keys -> Keys
-decodeKeys bool keyCode keys =
-    case keyCode of
-        13 ->
-            { keys | enter = bool }
-
-        27 ->
-            { keys | esc = bool }
-
-        68 ->
-            { keys | d = bool }
-
-        73 ->
-            { keys | i = bool }
-
-        74 ->
-            { keys | j = bool }
-
-        75 ->
-            { keys | k = bool }
-
-        _ ->
-            keys
-
-
 handleKeys : Keys -> Model -> Model
 handleKeys { esc, d, i, j, k } model =
-    if d then
-        { model | debug = not model.debug }
-    else if esc && not model.vimMode then
-        { model | vimMode = True }
-    else if i && model.vimMode then
-        { model | vimMode = False }
-    else if model.vimMode then
-        case model.template of
-            Block ->
-                if j then
-                    case model.blockModel.nextBlockHash of
-                        Just hash ->
-                            { model | query = hash }
-
-                        Nothing ->
-                            model
-                else if k then
-                    case model.blockModel.previousBlockHash of
-                        Just hash ->
-                            { model | query = hash }
-
-                        Nothing ->
-                            model
-                else
-                    model
-
-            _ ->
+    let
+        toggleVimMode model =
+            if esc && not model.vimMode then
+                { model | vimMode = True }
+            else if i && model.vimMode then
+                { model | vimMode = False }
+            else
                 model
-    else
-        model
+
+        handleVimMode model =
+            if not model.vimMode then
+                model
+            else
+                case model.template of
+                    Block ->
+                        if j then
+                            case model.blockModel.nextBlockHash of
+                                Just hash ->
+                                    { model | query = hash }
+
+                                Nothing ->
+                                    model
+                        else if k then
+                            case model.blockModel.previousBlockHash of
+                                Just hash ->
+                                    { model | query = hash }
+
+                                Nothing ->
+                                    model
+                        else
+                            model
+
+                    _ ->
+                        model
+
+        handleDebug model =
+            if d && model.vimMode then
+                { model | debug = not model.debug }
+            else
+                model
+    in
+        model |> toggleVimMode |> handleVimMode |> handleDebug
 
 
 extractQuery : Navigation.Location -> String
@@ -410,6 +384,16 @@ extractQuery location =
             pathname
 
 
+extractRPCEndpoint : Navigation.Location -> String
+extractRPCEndpoint location =
+    String.concat
+        [ "https://"
+        , location.host
+        , location.pathname
+        , "rpc"
+        ]
+
+
 extractWSEndpoint : Navigation.Location -> String
 extractWSEndpoint location =
     String.concat
@@ -418,6 +402,25 @@ extractWSEndpoint location =
         , location.pathname
         , "ws"
         ]
+
+
+extractCoin : Flags -> Config.Coin
+extractCoin flags =
+    case flags.coin of
+        "BCH" ->
+            Config.BCH
+
+        "BTC" ->
+            Config.BTC
+
+        "DCR" ->
+            Config.DCR
+
+        _ ->
+            Debug.crash <|
+                "Invalid coin: "
+                    ++ flags.coin
+                    ++ " (valid coins are BCH, BTC and DCR)"
 
 
 newUrl : Model -> Cmd Msg
@@ -429,40 +432,29 @@ updateUrl : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 updateUrl ( model, cmd ) =
     let
         commands =
-            case model.query of
-                "" ->
-                    [ newUrl model ]
-
-                _ ->
-                    [ newUrl model
-                    , elmToJs [ "title", (toString model.template) ++ " " ++ model.query ]
+            if model.template == Home then
+                [ newUrl model, elmToJs [ "title", "" ] ]
+            else if String.isEmpty model.query then
+                [ newUrl model ]
+            else
+                [ newUrl model
+                , elmToJs
+                    [ "title"
+                    , (toString model.template) ++ " " ++ model.query
                     ]
+                ]
     in
         ( model, Cmd.batch <| commands ++ [ cmd ] )
 
 
 getBestBlock : Model -> Cmd Msg
 getBestBlock model =
-    let
-        params =
-            Encode.list []
-    in
-        JsonRpc.post "getbestblock" params GetBestBlockResult decodeGetBestBlock
+    JsonRpc.sendWithoutParams model.config.rpcEndpoint
+        "getbestblock"
+        GetBestBlockResult
+        Decoder.decodeGetBestBlock
 
 
-decodeGetBestBlock : Decode.Decoder BestBlock
-decodeGetBestBlock =
-    Decode.map2 BestBlock
-        (Decode.at [ "result", "hash" ] Decode.string)
-        (Decode.at [ "result", "height" ] Decode.int)
-
-
-decodeTxAccepted : String -> Maybe BasicTransaction
-decodeTxAccepted json =
-    let
-        decodeParams =
-            Decode.map2 BasicTransaction
-                (Decode.index 0 Decode.string)
-                (Decode.index 1 Decode.float)
-    in
-        Decode.decodeString (Decode.field "params" decodeParams) json |> Result.toMaybe
+webSocketTTL : Time
+webSocketTTL =
+    Time.second * 10

@@ -7,6 +7,7 @@ import Time exposing (Time)
 import Json.Encode as Encode
 import Json.Decode as Decode
 import Lib.JsonRpc as JsonRpc
+import Trappisto.Config exposing (..)
 import Trappisto.Helpers exposing (..)
 import Components.Transaction as Transaction
 
@@ -17,29 +18,29 @@ type alias Model =
     , tickets : List String
     , fetching : Bool
     , error : Maybe String
-    , coin : Coin
+    , config : Config
     }
 
 
-initialModel : Coin -> Model
-initialModel coin =
+initialModel : Config -> Model
+initialModel config =
     { address = ""
     , transactions = []
     , tickets = []
     , fetching = False
     , error = Nothing
-    , coin = coin
+    , config = config
     }
 
 
-modelFromJson : JsonModel -> Coin -> Model
-modelFromJson jsonModel coin =
+modelFromJson : JsonModel -> Config -> Model
+modelFromJson jsonModel config =
     { address = jsonModel.address
-    , transactions = List.map (\tx -> Transaction.modelFromJson tx coin) jsonModel.transactions
+    , transactions = List.map (\tx -> Transaction.modelFromJson tx config) jsonModel.transactions
     , tickets = []
     , fetching = False
     , error = Nothing
-    , coin = coin
+    , config = config
     }
 
 
@@ -138,7 +139,7 @@ update msg model =
                 updatedModel =
                     { model | fetching = True }
             in
-                case model.coin of
+                case model.config.coin of
                     DCR ->
                         ( updatedModel, searchRawTransactions updatedModel address )
 
@@ -158,7 +159,7 @@ update msg model =
         SearchRawTransactionsResult result ->
             case result of
                 Ok jsonModel ->
-                    ( modelFromJson jsonModel model.coin, Cmd.none )
+                    ( modelFromJson jsonModel model.config, Cmd.none )
 
                 Err error ->
                     ( { model
@@ -196,7 +197,9 @@ searchRawTransactions model address =
                 , Encode.bool True
                 ]
     in
-        JsonRpc.post "searchrawtransactions"
+        JsonRpc.send
+            model.config.rpcEndpoint
+            "searchrawtransactions"
             params
             SearchRawTransactionsResult
             (decodeSearchRawTransactions address)

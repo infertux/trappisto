@@ -1,8 +1,17 @@
-module Lib.WebSocket exposing (send, isSuccess, isMethod)
+module Lib.WebSocket exposing (listen, send, isSuccess, isMethod)
+
+{-
+   This allows to send web socket messages to the `/ws` endpoint and parse notification messages.
+-}
 
 import WebSocket
 import Json.Decode as Decode
 import Json.Encode as Encode
+
+
+listen : String -> (String -> msg) -> Sub msg
+listen endpoint msg =
+    WebSocket.listen endpoint msg
 
 
 send : String -> String -> List Encode.Value -> Cmd msg

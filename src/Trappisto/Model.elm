@@ -5,18 +5,15 @@ import Window
 import Keyboard
 import Time exposing (Time)
 import Http exposing (Error)
+import Trappisto.Config exposing (..)
 import Components.Address as AddressComponent
 import Components.Block as BlockComponent
 import Components.Transaction as TransactionComponent
-import Trappisto.Helpers exposing (Coin)
 
 
 type alias Flags =
-    { coin : String }
-
-
-type alias Config =
-    { coin : Coin }
+    { coin : String
+    }
 
 
 type Template
@@ -36,40 +33,38 @@ type alias Model =
     , query : String
     , template : Template
     , error : Maybe String
-    , wsEndpoint : String
     , vimMode : Bool
     , debug : Bool
     , now : Time
+    , fetching : Bool
+    , webSocketConnected : Bool
     , lastWebSocketPong : Time
     , lastBlockHash : String
     , lastBlockHeight : Int
     , lastTransactions : List BasicTransaction
-    , fetching : Bool
-    , webSocketConnected : Bool
     }
 
 
-initialModel : Coin -> String -> String -> Model
-initialModel coin wsEndpoint query =
-    { config = Config coin
+initialModel : Config -> String -> Model
+initialModel config query =
+    { config = config
     , keys = Keys False False False False False False
     , window = Window.Size 0 0
-    , addressModel = AddressComponent.initialModel coin
-    , blockModel = BlockComponent.initialModel coin
-    , transactionModel = TransactionComponent.initialModel coin
+    , addressModel = AddressComponent.initialModel config
+    , blockModel = BlockComponent.initialModel config
+    , transactionModel = TransactionComponent.initialModel config
     , query = query
     , template = Home
     , error = Nothing
-    , wsEndpoint = wsEndpoint
     , vimMode = False
     , debug = False
+    , fetching = False
+    , webSocketConnected = False
     , now = -1
     , lastWebSocketPong = -1
     , lastBlockHash = ""
     , lastBlockHeight = -1
     , lastTransactions = []
-    , fetching = False
-    , webSocketConnected = False
     }
 
 
@@ -79,12 +74,12 @@ type Msg
     | BlockMsg BlockComponent.Msg
     | TransactionMsg TransactionComponent.Msg
     | JsMsg (List String)
+    | WebSocketMsg String
     | Query String
     | KeyChange Bool Keyboard.KeyCode
     | Resize Window.Size
     | Tick Time
-    | WSMsg String
-    | GetBestBlock
+    | GetBestBlockx
     | GetBestBlockResult (Result Http.Error BestBlock)
 
 

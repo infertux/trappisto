@@ -197,10 +197,10 @@ view model =
         formatTransaction tx =
             let
                 size =
-                    toString (Basics.min 9 (logBase 10 tx.amount * 4)) ++ "rem"
+                    toString (Basics.clamp 3 9 (logBase 10 tx.amount * 4)) ++ "rem"
 
                 fontSize =
-                    toString (Basics.min 3 (logBase 10 tx.amount * 1.5)) ++ "rem"
+                    toString (Basics.clamp 1 3 (logBase 10 tx.amount * 1.5)) ++ "rem"
 
                 amount =
                     toString (round tx.amount) ++ "<br>DCR"
@@ -222,18 +222,7 @@ view model =
             else
                 case model.template of
                     Home ->
-                        case model.query of
-                            "" ->
-                                [ searchView model, errorView model, ascii, lastTransactions ]
-
-                            "particles" ->
-                                [ div [ class "row" ]
-                                    [ div [ class "col" ] [ text "Reticulating splines..." ]
-                                    ]
-                                ]
-
-                            _ ->
-                                [ searchView model, errorView model ]
+                        [ searchView model, errorView model, ascii, lastTransactions ]
 
                     Address ->
                         if isError model then

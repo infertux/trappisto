@@ -137,7 +137,11 @@
             break;
 
           case 'title':
-            document.title = params[0] + " - " + coin + " blockchain - Trappisto";
+            if (params[0] === "") {
+              document.title = coin + " blockchain - Trappisto";
+            } else {
+              document.title = params[0] + " - " + coin + " blockchain - Trappisto";
+            }
             break;
 
           default:

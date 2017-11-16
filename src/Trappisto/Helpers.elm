@@ -1,14 +1,15 @@
 module Trappisto.Helpers exposing (..)
 
+{-
+   Generic helpers to help with formatting and creating views. Those should not
+   be specific to Trappisto and could be reused in other projects. If multiple
+   helpers fit the same "category", they should be extracted into a library and
+   moved to src/Lib.
+-}
+
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Lib.HtmlAttributesExtra as HtmlAttributesExtra
-
-
-type Coin
-    = BCH
-    | BTC
-    | DCR
 
 
 pluralize : Int -> String -> String

@@ -10,6 +10,7 @@ import Time exposing (Time)
 import Regex
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
+import Trappisto.Config exposing (..)
 import Trappisto.Helpers exposing (..)
 
 
@@ -25,12 +26,12 @@ type alias Model =
     , vOut : List VOut
     , fetching : Bool
     , error : Maybe String
-    , coin : Coin
+    , config : Config
     }
 
 
-initialModel : Coin -> Model
-initialModel coin =
+initialModel : Config -> Model
+initialModel config =
     { hash = ""
     , type_ = "?"
     , size = -1
@@ -42,12 +43,12 @@ initialModel coin =
     , vOut = []
     , fetching = False
     , error = Nothing
-    , coin = coin
+    , config = config
     }
 
 
-modelFromJson : JsonModel -> Coin -> Model
-modelFromJson jsonModel coin =
+modelFromJson : JsonModel -> Config -> Model
+modelFromJson jsonModel config =
     { hash = jsonModel.hash
     , type_ = computeType jsonModel
     , size = computeSize jsonModel
@@ -59,7 +60,7 @@ modelFromJson jsonModel coin =
     , vOut = List.sortBy .value jsonModel.vOut |> List.reverse
     , fetching = False
     , error = Nothing
-    , coin = coin
+    , config = config
     }
 
 
@@ -129,17 +130,21 @@ view model now =
                     queryLink hash (toString height) []
 
         formatFees model =
-            case model.coin of
+            case model.config.coin of
                 DCR ->
                     [ ( "total sent", Just <| formatAmount (totalSent model) )
                     , ( "fee"
                       , Just <|
                             span []
-                                [ formatAmount (fee model)
-                                , span [] [ text " (" ]
-                                , formatAmount (feePerKb model)
-                                , span [] [ text "/kB)" ]
-                                ]
+                                (if fee model == 0 then
+                                    [ formatAmount (fee model) ]
+                                 else
+                                    [ formatAmount (fee model)
+                                    , span [] [ text " (" ]
+                                    , formatAmount (feePerKb model)
+                                    , span [] [ text "/kB)" ]
+                                    ]
+                                )
                       )
                     ]
 
@@ -267,7 +272,7 @@ update msg model =
         GetRawTransactionResult result ->
             case result of
                 Ok jsonModel ->
-                    ( modelFromJson jsonModel model.coin, Cmd.none )
+                    ( modelFromJson jsonModel model.config, Cmd.none )
 
                 Err error ->
                     ( { model
@@ -284,7 +289,9 @@ getRawTransaction model hash =
         params =
             Encode.list [ Encode.string hash, Encode.int 1 ]
     in
-        JsonRpc.post "getrawtransaction"
+        JsonRpc.send
+            model.config.rpcEndpoint
+            "getrawtransaction"
             params
             GetRawTransactionResult
             (decodeGetRawTransaction True)

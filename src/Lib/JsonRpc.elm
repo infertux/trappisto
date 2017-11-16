@@ -1,4 +1,8 @@
-module Lib.JsonRpc exposing (post, parseError)
+module Lib.JsonRpc exposing (send, sendWithoutParams, parseError)
+
+{-
+   This allows to send JSONRPC requests to the `/rpc` endpoint and decode any errors.
+-}
 
 import Http
 import Json.Decode
@@ -17,19 +21,44 @@ type alias RequestParams a =
     }
 
 
-decodeError : String -> String
-decodeError json =
+send :
+    String
+    -> String
+    -> Json.Encode.Value
+    -> (Result Http.Error a -> msg)
+    -> Json.Decode.Decoder a
+    -> Cmd msg
+send endpoint method params result decoder =
     let
-        decode =
-            Json.Decode.at [ "error", "message" ] Json.Decode.string
-                |> Json.Decode.decodeString
-    in
-        case decode json of
-            Ok result ->
-                result
+        json =
+            Json.Encode.object
+                [ ( "jsonrpc", Json.Encode.string "2.0" )
+                , ( "id", Json.Encode.int 0 )
+                , ( "method", Json.Encode.string method )
+                , ( "params", params )
+                ]
 
-            Err err ->
-                "Cannot decode error: " ++ err ++ " | " ++ json
+        request =
+            { method = "POST"
+            , url = endpoint
+            , body = Http.jsonBody json
+            , expect = Http.expectJson decoder
+            , headers = []
+            , timeout = Nothing
+            , withCredentials = False
+            }
+    in
+        request |> Http.request |> Http.send result
+
+
+sendWithoutParams :
+    String
+    -> String
+    -> (Result Http.Error a -> msg)
+    -> Json.Decode.Decoder a
+    -> Cmd msg
+sendWithoutParams endpoint method result decoder =
+    send endpoint method (Json.Encode.list []) result decoder
 
 
 parseError : Http.Error -> Maybe String
@@ -48,34 +77,16 @@ parseError error =
             Just (toString error)
 
 
-post :
-    String
-    -> Json.Encode.Value
-    -> (Result Http.Error a -> msg)
-    -> Json.Decode.Decoder a
-    -> Cmd msg
-post method params result decoder =
-    Http.send result <|
-        Http.request <|
-            makeRequest method params decoder
-
-
-makeRequest : String -> Json.Encode.Value -> Json.Decode.Decoder a -> RequestParams a
-makeRequest method params decoder =
+decodeError : String -> String
+decodeError json =
     let
-        json =
-            Json.Encode.object
-                [ ( "jsonrpc", Json.Encode.string "2.0" )
-                , ( "id", Json.Encode.int 0 )
-                , ( "method", Json.Encode.string method )
-                , ( "params", params )
-                ]
+        decode =
+            Json.Decode.at [ "error", "message" ] Json.Decode.string
+                |> Json.Decode.decodeString
     in
-        { method = "POST"
-        , url = "/rpc"
-        , body = Http.jsonBody json
-        , expect = Http.expectJson decoder
-        , headers = []
-        , timeout = Nothing
-        , withCredentials = False
-        }
+        case decode json of
+            Ok result ->
+                result
+
+            Err err ->
+                "Cannot decode error: " ++ err ++ " | " ++ json

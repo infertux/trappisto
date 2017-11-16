@@ -9,6 +9,7 @@ import Json.Decode.Pipeline as Pipeline
 import Time exposing (Time)
 import Lib.TimeExtra as TimeExtra
 import Lib.JsonRpc as JsonRpc
+import Trappisto.Config exposing (..)
 import Trappisto.Helpers exposing (..)
 
 
@@ -25,12 +26,12 @@ type alias Model =
     , nextBlockHash : Maybe String
     , fetching : Bool
     , error : Maybe String
-    , coin : Coin
+    , config : Config
     }
 
 
-initialModel : Coin -> Model
-initialModel coin =
+initialModel : Config -> Model
+initialModel config =
     { hash = ""
     , height = -1
     , time = -1
@@ -43,12 +44,12 @@ initialModel coin =
     , nextBlockHash = Nothing
     , fetching = False
     , error = Nothing
-    , coin = coin
+    , config = config
     }
 
 
-modelFromJson : JsonModel -> Coin -> Model
-modelFromJson jsonModel coin =
+modelFromJson : JsonModel -> Config -> Model
+modelFromJson jsonModel config =
     { height = jsonModel.height
     , hash = jsonModel.hash
     , time = Time.second * (toFloat jsonModel.time)
@@ -61,7 +62,7 @@ modelFromJson jsonModel coin =
     , nextBlockHash = jsonModel.nextBlockHash
     , fetching = False
     , error = Nothing
-    , coin = coin
+    , config = config
     }
 
 
@@ -126,7 +127,7 @@ view model now =
                         |> Just
 
         allTransactions =
-            case model.coin of
+            case model.config.coin of
                 DCR ->
                     [ ( "stake transactions", transactions model.tickets "secondary" )
                     , ( "regular transactions", transactions model.transactions "light" )
@@ -199,7 +200,7 @@ update msg model =
         GetBlockResult result ->
             case result of
                 Ok jsonModel ->
-                    ( modelFromJson jsonModel model.coin, Cmd.none )
+                    ( modelFromJson jsonModel model.config, Cmd.none )
 
                 Err error ->
                     ( { model
@@ -229,7 +230,11 @@ getBlock model hash =
         params =
             Encode.list [ Encode.string hash ]
     in
-        JsonRpc.post "getblock" params GetBlockResult decodeGetBlock
+        JsonRpc.send model.config.rpcEndpoint
+            "getblock"
+            params
+            GetBlockResult
+            decodeGetBlock
 
 
 getBlockHash : Model -> Int -> Cmd Msg
@@ -238,7 +243,12 @@ getBlockHash model height =
         params =
             Encode.list [ Encode.int height ]
     in
-        JsonRpc.post "getblockhash" params GetBlockHashResult decodeGetBlockHash
+        JsonRpc.send
+            model.config.rpcEndpoint
+            "getblockhash"
+            params
+            GetBlockHashResult
+            decodeGetBlockHash
 
 
 decodeGetBlock : Decode.Decoder JsonModel
