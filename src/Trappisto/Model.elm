@@ -43,6 +43,7 @@ type alias Model =
     , lastWebSocketPong : Time
     , lastBlockHash : String
     , lastBlockHeight : Int
+    , lastTransactions : List BasicTransaction
     , fetching : Bool
     , webSocketConnected : Bool
     }
@@ -66,6 +67,7 @@ initialModel coin wsEndpoint query =
     , lastWebSocketPong = -1
     , lastBlockHash = ""
     , lastBlockHeight = -1
+    , lastTransactions = []
     , fetching = False
     , webSocketConnected = False
     }
@@ -87,7 +89,15 @@ type Msg
 
 
 type alias BestBlock =
-    { hash : String, height : Int }
+    { hash : String
+    , height : Int
+    }
+
+
+type alias BasicTransaction =
+    { hash : String
+    , amount : Float
+    }
 
 
 type alias Keys =

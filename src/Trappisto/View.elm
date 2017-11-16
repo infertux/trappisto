@@ -94,7 +94,7 @@ searchView model =
             div [ class "row" ]
                 [ div
                     [ class "col text-center" ]
-                    [ a [ href "/" ]
+                    [ a [ href "javascript:query('')" ]
                         [ img
                             [ class
                                 (if isFetching model then
@@ -177,6 +177,45 @@ view model =
                     ]
                 ]
 
+        lastTransactions =
+            if List.isEmpty model.lastTransactions then
+                span [] []
+            else
+                div [ class "row text-center mt-3" ]
+                    [ div [ class "col" ] <|
+                        List.concat
+                            [ [ hr [] []
+                              , h3 []
+                                    [ span [ class "badge badge-pill badge-info" ]
+                                        [ text "Latest transactions" ]
+                                    ]
+                              ]
+                            , List.map formatTransaction model.lastTransactions
+                            ]
+                    ]
+
+        formatTransaction tx =
+            let
+                size =
+                    toString (Basics.min 9 (logBase 10 tx.amount * 4)) ++ "rem"
+
+                fontSize =
+                    toString (Basics.min 3 (logBase 10 tx.amount * 1.5)) ++ "rem"
+
+                amount =
+                    toString (round tx.amount) ++ "<br>DCR"
+            in
+                div
+                    [ class "badge badge-pill badge-info m-2"
+                    , style
+                        [ ( "line-height", fontSize )
+                        , ( "font-size", fontSize )
+                        , ( "height", size )
+                        , ( "width", size )
+                        ]
+                    ]
+                    [ queryLink tx.hash amount [] ]
+
         content =
             if model.error /= Nothing then
                 [ searchView model, errorView model ]
@@ -185,7 +224,7 @@ view model =
                     Home ->
                         case model.query of
                             "" ->
-                                [ searchView model, errorView model, ascii ]
+                                [ searchView model, errorView model, ascii, lastTransactions ]
 
                             "particles" ->
                                 [ div [ class "row" ]

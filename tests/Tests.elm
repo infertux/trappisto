@@ -9,6 +9,8 @@ import Lib.WebSocket as WebSocket
 import Components.Address as Address
 import Components.Block as Block
 import Components.Transaction as Transaction
+import Trappisto.Model exposing (..)
+import Trappisto.Update
 import Trappisto.Helpers as Coin exposing (Coin)
 
 
@@ -107,7 +109,7 @@ suite =
                         List.map (\fixture -> WebSocket.isSuccess fixture)
                             [ connectFixture, sessionFixture ]
                             |> Expect.equal [ True, True ]
-            , test "isMethod" <|
+            , test "isMethod with blockconnected" <|
                 \() ->
                     let
                         blockConnectedFixture =
@@ -117,6 +119,37 @@ suite =
                             WebSocket.isMethod [ "blockconnected", "blockdisconnected" ] blockConnectedFixture
                     in
                         Expect.equal result True
+            , test "isMethod with txaccepted" <|
+                \() ->
+                    let
+                        txAcceptedFixture =
+                            "{\"jsonrpc\":\"1.0\",\"method\":\"txaccepted\",\"params\":[\"e943704526165772229307a3e2406f5805160a9a0d33d702691044daef0ecbb2\",72.31055621],\"id\":null}"
+
+                        result =
+                            WebSocket.isMethod [ "txaccepted" ] txAcceptedFixture
+                    in
+                        Expect.equal result True
+            , test "decodeTxAccepted" <|
+                \() ->
+                    let
+                        txAcceptedFixture =
+                            "{\"jsonrpc\":\"1.0\",\"method\":\"txaccepted\",\"params\":[\"e943704526165772229307a3e2406f5805160a9a0d33d702691044daef0ecbb2\",72.31055621],\"id\":null}"
+
+                        result =
+                            Trappisto.Update.decodeTxAccepted txAcceptedFixture
+
+                        model =
+                            case result of
+                                Ok model ->
+                                    model
+
+                                Err error ->
+                                    Debug.crash error
+                    in
+                        Expect.equal model <|
+                            BasicTransaction
+                                "e943704526165772229307a3e2406f5805160a9a0d33d702691044daef0ecbb2"
+                                72.31055621
             ]
         , describe "Fuzz test examples, using randomly generated input"
             -- XXX: keping them as examples

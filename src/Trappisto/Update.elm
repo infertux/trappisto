@@ -121,10 +121,25 @@ update action model =
                 connected =
                     Lib.WebSocket.isSuccess message
 
+                txAccepted =
+                    if Lib.WebSocket.isMethod [ "txaccepted" ] message then
+                        decodeTxAccepted message
+                    else
+                        Nothing
+
+                newLastTransactions =
+                    case txAccepted of
+                        Nothing ->
+                            model.lastTransactions
+
+                        Just tx ->
+                            List.take 15 (tx :: model.lastTransactions)
+
                 updatedModel =
                     { model
                         | webSocketConnected = connected
                         , lastWebSocketPong = model.now
+                        , lastTransactions = newLastTransactions
                     }
 
                 cmd =
@@ -440,3 +455,14 @@ decodeGetBestBlock =
     Decode.map2 BestBlock
         (Decode.at [ "result", "hash" ] Decode.string)
         (Decode.at [ "result", "height" ] Decode.int)
+
+
+decodeTxAccepted : String -> Maybe BasicTransaction
+decodeTxAccepted json =
+    let
+        decodeParams =
+            Decode.map2 BasicTransaction
+                (Decode.index 0 Decode.string)
+                (Decode.index 1 Decode.float)
+    in
+        Decode.decodeString (Decode.field "params" decodeParams) json |> Result.toMaybe
