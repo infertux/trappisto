@@ -99,7 +99,7 @@ view model now =
                     let
                         ( label, classes ) =
                             if direction == "right" then
-                                ( "Next block", " float-right ml-2" )
+                                ( "Next block", " ml-2" )
                             else
                                 ( "Previous block", "" )
                     in
@@ -136,16 +136,20 @@ view model now =
                 _ ->
                     [ ( "transactions", transactions model.transactions "light" ) ]
     in
-        div [ class "row align-items-center" ]
+        div [ class "row" ]
             [ div [ class "col" ]
                 [ div
                     [ class "card bg-dark" ]
-                    [ h5 [ class "card-header" ]
-                        [ sibbling model.previousBlockHash "left"
-                        , span [ class "ml-4" ]
-                            [ text <| "Block " ++ model.hash ]
-                        , sibbling model.nextBlockHash "right"
-                        , dcrDataLink <| "block/" ++ model.hash
+                    [ h5 [ class "card-header d-flex justify-content-between" ]
+                        [ span []
+                            [ sibbling model.previousBlockHash "left"
+                            , span [ class "d-inline d-lg-none ml-2 align-self-start" ] [ text <| "Block " ++ (shortHash model.hash) ]
+                            , span [ class "d-none d-lg-inline ml-2 align-self-start" ] [ text <| "Block " ++ model.hash ]
+                            ]
+                        , span []
+                            [ dcrDataLink <| "block/" ++ model.hash
+                            , sibbling model.nextBlockHash "right"
+                            ]
                         ]
                     , div [ class "card-body" ]
                         [ p [ class "card-text" ]

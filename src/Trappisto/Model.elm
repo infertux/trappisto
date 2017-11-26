@@ -79,7 +79,6 @@ type Msg
     | KeyChange Bool Keyboard.KeyCode
     | Resize Window.Size
     | Tick Time
-    | GetBestBlockx
     | GetBestBlockResult (Result Http.Error BestBlock)
 
 

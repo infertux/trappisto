@@ -83,10 +83,10 @@ view model now =
                     (\tx ->
                         tr []
                             [ td [] [ queryLink tx.hash (shortHash tx.hash) [] ]
-                            , td [] [ text tx.type_ ]
+                            , td [ class "d-none d-sm-block" ] [ text tx.type_ ]
                             , td []
-                                [ Transaction.vInToAddress model.address tx |> formatAmount ]
-                            , td [] [ Transaction.formatTime tx now ]
+                                [ Transaction.sentToAddress model.address tx |> formatAmount ]
+                            , td [ class "d-none d-sm-block" ] [ Transaction.formatTime tx now ]
                             , td [] [ text <| toString tx.confirmations ]
                             ]
                     )
@@ -94,8 +94,9 @@ view model now =
         div [ class "row" ]
             [ div [ class "col" ]
                 [ div [ class "card bg-dark" ]
-                    [ h5 [ class "card-header" ]
-                        [ span [] [ text <| "Address " ++ model.address ]
+                    [ h5 [ class "card-header d-flex justify-content-between" ]
+                        [ span [ class "d-inline d-lg-none align-self-center" ] [ text <| "Address " ++ (shortAddress model.address) ]
+                        , span [ class "d-none d-lg-inline align-self-center" ] [ text <| "Address " ++ model.address ]
                         , dcrDataLink <| "address/" ++ model.address
                         ]
                     , div [ class "card-body" ]
@@ -114,9 +115,9 @@ view model now =
                                     [ thead []
                                         [ tr []
                                             [ th [] [ text "hash" ]
-                                            , th [] [ text "type" ]
-                                            , th [] [ text "credit" ]
-                                            , th [] [ text "time" ]
+                                            , th [ class "d-none d-sm-block" ] [ text "type" ]
+                                            , th [] [ text "received" ]
+                                            , th [ class "d-none d-sm-block" ] [ text "time" ]
                                             , th []
                                                 [ abbr [ title "confirmations" ] [ text "conf." ] ]
                                             ]
@@ -220,7 +221,7 @@ decodeSearchRawTransactions address =
 
 maxTransactionCount : Int
 maxTransactionCount =
-    500
+    250
 
 
 missingTransactions : Model -> Bool

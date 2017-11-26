@@ -189,13 +189,6 @@ update action model =
                     )
                         |> updateUrl
 
-        GetBestBlockx ->
-            let
-                updatedModel =
-                    { model | fetching = True }
-            in
-                ( updatedModel, getBestBlock updatedModel )
-
         GetBestBlockResult result ->
             case result of
                 Ok bestBlock ->

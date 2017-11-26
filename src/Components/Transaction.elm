@@ -124,10 +124,10 @@ view model now =
                     queryLink hash (shortHash hash) []
 
                 ( Nothing, Just height ) ->
-                    queryLink (toString height) (toString height) []
+                    queryLink (formatNumber height) (toString height) []
 
                 ( Just hash, Just height ) ->
-                    queryLink hash (toString height) []
+                    queryLink hash (formatNumber height) []
 
         formatFees model =
             case model.config.coin of
@@ -151,19 +151,33 @@ view model now =
                 _ ->
                     []
 
-        formatAddresses scriptPubKey =
-            div [] <|
-                (List.map
-                    (\address -> div [] [ queryLink address address [] ])
-                    scriptPubKey.addresses
-                )
+        formatAddresses maybe =
+            case maybe of
+                Nothing ->
+                    span [] []
+
+                Just wrapper ->
+                    div [] <|
+                        (List.map
+                            (\address ->
+                                div []
+                                    [ queryLink address
+                                        (shortAddress address)
+                                        [ class "d-inline d-xs-none" ]
+                                    , queryLink address
+                                        address
+                                        [ class "d-none d-xs-inline" ]
+                                    ]
+                            )
+                            wrapper.addresses
+                        )
 
         formatVIn vIn =
             vIn
                 |> List.map
                     (\vIn ->
                         li [ class "list-group-item bg-secondary" ]
-                            [ span [ class "badge badge-info" ]
+                            [ span [ class "badge badge-info mr-2" ]
                                 [ text
                                     (if vIn.coinbase /= Nothing then
                                         "coinbase"
@@ -179,15 +193,16 @@ view model now =
                                   else
                                     span [] []
                                 ]
+                            , div [ class "clearfix" ] []
                             , div []
-                                [ (case vIn.txId of
+                                (case vIn.txId of
                                     Just hash ->
-                                        queryLink hash ("Transaction " ++ shortHash hash) []
+                                        [ queryLink hash (shortHash hash) [] ]
 
                                     Nothing ->
-                                        span [] []
-                                  )
-                                ]
+                                        [ span [] [] ]
+                                )
+                            , formatAddresses vIn.prevOut
                             ]
                     )
 
@@ -196,9 +211,10 @@ view model now =
                 |> List.map
                     (\vOut ->
                         li [ class "list-group-item bg-secondary" ]
-                            [ span [ class "badge badge-info" ] [ text vOut.scriptPubKey.type_ ]
+                            [ span [ class "badge badge-info mr-2" ] [ text vOut.scriptPubKey.type_ ]
                             , span [ class "float-right" ] [ formatAmount vOut.value ]
-                            , formatAddresses vOut.scriptPubKey
+                            , div [ class "clearfix" ] []
+                            , formatAddresses (Just vOut.scriptPubKey)
                             , code [ class "mt-2" ] [ text vOut.scriptPubKey.asm ]
                             ]
                     )
@@ -207,8 +223,9 @@ view model now =
             [ div [ class "col" ]
                 [ div
                     [ class "card bg-dark" ]
-                    [ h5 [ class "card-header" ]
-                        [ span [] [ text <| "Transaction " ++ model.hash ]
+                    [ h5 [ class "card-header d-flex justify-content-between" ]
+                        [ span [ class "d-inline d-lg-none align-self-center" ] [ text <| "Transaction " ++ (shortHash model.hash) ]
+                        , span [ class "d-none d-lg-inline align-self-center" ] [ text <| "Transaction " ++ model.hash ]
                         , dcrDataLink <| "tx/" ++ model.hash
                         ]
                     , div [ class "card-body" ]
@@ -236,7 +253,7 @@ view model now =
                             ]
                         , hr [] []
                         , div [ class "row" ]
-                            [ div [ class "col" ]
+                            [ div [ class "col mb-3" ]
                                 [ h4 [ class "text-center" ]
                                     [ span [ class "badge badge-pill badge-info" ]
                                         [ text <| pluralize (List.length model.vIn) "input" ]
@@ -244,7 +261,7 @@ view model now =
                                 , ul [ class "list-group list-group-flush" ] <|
                                     formatVIn model.vIn
                                 ]
-                            , div [ class "col" ]
+                            , div [ class "col mb-3" ]
                                 [ h4 [ class "text-center" ]
                                     [ span [ class "badge badge-pill badge-info" ]
                                         [ text <| pluralize (List.length model.vOut) "output" ]
@@ -311,7 +328,11 @@ decodeGetRawTransaction prefix =
             |> Pipeline.requiredAt (path "hex") Decode.string
             |> Pipeline.optionalAt (path "confirmations") Decode.int 0
             |> Pipeline.optionalAt (path "blockhash") (Decode.maybe Decode.string) Nothing
-            |> Pipeline.optionalAt (path "blockheight") (Decode.maybe Decode.int) Nothing
+            |> Pipeline.optionalAt (path "blockheight")
+                (Decode.maybe Decode.int
+                    |> Decode.andThen (\height -> zeroToNothing height |> Decode.succeed)
+                )
+                Nothing
             |> Pipeline.optionalAt (path "time") (Decode.maybe Decode.int) Nothing
             |> Pipeline.requiredAt (path "vin") (Decode.list decodeVIn)
             |> Pipeline.requiredAt (path "vout") (Decode.list decodeVOut)
@@ -327,9 +348,24 @@ decodeVIn =
             )
             Nothing
         |> Pipeline.optionalAt [ "coinbase" ] (Decode.maybe Decode.string) Nothing
-        |> Pipeline.optionalAt [ "amountin" ] Decode.float -1
+        |> Pipeline.requiredAt [ "amountin" ] decodeAmountIn
         |> Pipeline.optionalAt [ "blockheight" ] (Decode.maybe Decode.int) Nothing
         |> Pipeline.optionalAt [ "prevOut" ] (Decode.maybe decodePrevOut) Nothing
+
+
+decodeAmountIn : Decode.Decoder Float
+decodeAmountIn =
+    Decode.float
+        |> Decode.andThen
+            (\float ->
+                if float > 0 then
+                    Decode.succeed float
+                else if float == -1.0e-8 then
+                    --- XXX: unconfirmed txs will return -1 atom as placeholder
+                    Decode.succeed 0
+                else
+                    Debug.crash <| "Unknown amountin: " ++ (toString float)
+            )
 
 
 decodePrevOut : Decode.Decoder PrevOut
@@ -446,7 +482,6 @@ vInToAddress address model =
             )
         |> List.map .amountIn
         |> List.sum
-        |> negate
 
 
 vOutToAddress : String -> Model -> Float
@@ -456,6 +491,11 @@ vOutToAddress address model =
             (\vOut -> Just address == List.head vOut.scriptPubKey.addresses)
         |> List.map .value
         |> List.sum
+
+
+sentToAddress : String -> Model -> Float
+sentToAddress address model =
+    vOutToAddress address model - vInToAddress address model
 
 
 totalVIn : Model -> Float

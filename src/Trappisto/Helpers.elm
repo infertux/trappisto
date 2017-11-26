@@ -50,6 +50,11 @@ formatNumber int =
         toString int |> split |> List.reverse |> String.join ","
 
 
+shortAddress : String -> String
+shortAddress address =
+    String.concat [ String.left 4 address, "...", String.right 4 address ]
+
+
 shortHash : String -> String
 shortHash hash =
     String.concat [ String.left 2 hash, "...", String.right 2 hash ]
@@ -65,8 +70,8 @@ dlBuilder list =
 
                 Just value ->
                     Just <|
-                        [ dt [ class "col-3 text-right" ] [ text label ]
-                        , dd [ class "col-9" ] [ value ]
+                        [ dt [ class "col-6 col-sm-4 col-md-3 text-right" ] [ text label ]
+                        , dd [ class "col-6 col-sm-8 col-md-9" ] [ value ]
                         ]
     in
         dl [ class "row" ] (List.concat <| List.filterMap filter list)
@@ -87,12 +92,25 @@ queryLink query label attributes =
 dcrDataLink : String -> Html msg
 dcrDataLink path =
     a
-        [ class "btn btn-secondary float-right"
+        [ class "btn btn-secondary"
         , target "_blank"
         , title "Open on dcrdata.org"
         , href <| "https://explorer.dcrdata.org/explorer/" ++ path
         ]
         [ span [ class "oi oi-external-link" ] [] ]
+
+
+zeroToNothing : Maybe Int -> Maybe Int
+zeroToNothing maybe =
+    case maybe of
+        Just int ->
+            if int == 0 then
+                Nothing
+            else
+                maybe
+
+        Nothing ->
+            Nothing
 
 
 zeroesToNothing : Maybe String -> Maybe String

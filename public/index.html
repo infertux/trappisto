@@ -44,7 +44,6 @@
 
       body {
         font-family: 'Inconsolata', monospace;
-        font-size: 1.25rem;
       }
 
       hr {
@@ -61,14 +60,14 @@
         background-color: #000;
       }
 
+      .amount {
+        white-space: nowrap;
+      }
+
       .glow {
         transition: all 1s;
         background: orange;
         box-shadow: 0 0 10px 5px orange;
-      }
-
-      .fetching {
-        opacity: 0.5;
       }
 
       .rotate {
@@ -76,6 +75,10 @@
       }
 
       @keyframes spin { 100% { transform:rotate(360deg); } }
+
+      @media (min-width: 768px) {
+        body { font-size: 1.25rem; }
+      }
     </style>
   </head>
   <body class="bg-black text-white">
@@ -89,7 +92,7 @@
   <script>
     var style = document.createElement('style');
     style.type = 'text/css';
-    style.innerHTML = '.amount::after { content: " ' + coin + '" };';
+    style.innerHTML = '.amount::after { content: "' + '\u00a0' + coin + '" };';
     document.getElementsByTagName('head')[0].appendChild(style);
   </script>
 
@@ -107,13 +110,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-
   <script>
-    //particlesJS.load('particles-js', 'assets/js/particles.json', function() {
-      //console.log('callback - particles.js config loaded');
-    //});
-
     window.addEventListener('load', () => {
       const elmAppDiv = document.querySelector('#elm-app');
       const elmApp = Elm.Trappisto.embed(elmAppDiv, { coin: coin });
@@ -142,6 +139,12 @@
             } else {
               document.title = params[0] + " - " + coin + " blockchain - Trappisto";
             }
+            break;
+
+          case 'particles':
+             particlesJS.load('particles-js', 'assets/js/particles.json', () => {
+                 alert('Congrats, you found the easter egg! Particles are coming at you at supersonic speed!');
+             });
             break;
 
           default:
@@ -174,5 +177,7 @@
       // setTimeout(() => { logo.classList.remove('glow'); }, 1000);
     });
   </script>
+
+   <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js" async defer></script>
   </body>
 </html>

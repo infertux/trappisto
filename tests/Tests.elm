@@ -81,13 +81,18 @@ suite =
                             Decode.decodeString
                                 (Transaction.decodeGetRawTransaction True)
                                 getRawTransactionUnconfirmedFixture
-                    in
-                        case result of
-                            Ok jsonModel ->
-                                Expect.pass
 
-                            Err error ->
-                                Expect.fail error
+                        model =
+                            case result of
+                                Ok jsonModel ->
+                                    Transaction.modelFromJson
+                                        jsonModel
+                                        testConfig
+
+                                Err error ->
+                                    Debug.crash error
+                    in
+                        Expect.equal [ 0 ] <| List.map .amountIn model.vIn
             , test "computeVote" <|
                 \() ->
                     let

@@ -51,9 +51,10 @@ errorView model =
 
         Just error ->
             div [ class "row" ]
-                [ div [ class "col-6 offset-3" ]
+                [ div [ class "col-12 col-lg-6 offset-lg-3" ]
                     [ div
                         [ class "text-center alert alert-danger"
+                        , style [ ( "overflow", "hidden" ) ]
                         , HtmlAttributesExtra.innerHtml error
                         ]
                         []
@@ -66,20 +67,20 @@ searchView model =
     let
         search model =
             div [ class "row align-items-center" ]
-                [ div [ class "col-2" ] [ logo model ]
-                , div [ class "col-8" ]
+                [ div [ class "col-4 col-lg-3" ] [ logo model ]
+                , div [ class "col-4 col-lg-6" ]
                     [ input
                         [ id "query"
                         , name "query"
-                        , class "form-control form-control-lg text-center mt-2 mb-4"
+                        , class "form-control form-control-lg text-center mt-2 mb-2"
                         , placeholder
-                            "Search for blocks, transactions, addresses, particles, etc."
+                            "Search for blocks, transactions, addresses, etc."
                         , onInput Query
                         , value model.query
                         ]
                         []
                     ]
-                , div [ class "col-2" ] [ statusView model ]
+                , div [ class "col-4 col-lg-3" ] [ statusView model ]
                 ]
 
         vim =
@@ -98,9 +99,9 @@ searchView model =
                         [ img
                             [ class
                                 (if isFetching model then
-                                    "rotate"
+                                    "img-fluid rotate"
                                  else
-                                    ""
+                                    "img-fluid"
                                 )
                             , src "assets/images/decred.png"
                             , alt "logo"
@@ -136,16 +137,19 @@ statusView model =
     in
         div [ class "text-center" ]
             [ span
-                [ class "badge badge-dark" ]
-                [ h5 []
-                    [ span [] [ text "Last block:" ]
-                    , br [] []
-                    , lastBlock
-                    ]
+                [ class "w-100 badge badge-dark" ]
+                [ span [ class "oi oi-spreadsheet" ] []
+                , span [] [ text " " ]
+                , span [ class "d-none d-sm-inline" ] [ text "Last block: " ]
+                , lastBlock
                 ]
             , span
-                [ class <| "badge badge-pill badge-" ++ wsClass ]
-                [ text <| "Live updating: " ++ wsStatus ]
+                [ class <| "w-100 badge badge-" ++ wsClass ]
+                [ span [ class "oi oi-cloud-download" ] []
+                , span [] [ text " " ]
+                , span [ class "d-none d-sm-inline" ] [ text "Live updating: " ]
+                , span [] [ text wsStatus ]
+                ]
             ]
 
 
@@ -168,14 +172,17 @@ view : Model -> Html Msg
 view model =
     let
         ascii =
-            div [ class "row text-center mt-3" ]
-                [ div [ class "col" ]
-                    [ pre [ id "logo", class "text-white" ]
-                        [ text
-                            " ______   _______  _______  _______  _______  ______  \n(  __  \\ (  ____ \\(  ____ \\(  ____ )(  ____ \\(  __  \\ \n| (  \\  )| (    \\/| (    \\/| (    )|| (    \\/| (  \\  )\n| |   ) || (__    | |      | (____)|| (__    | |   ) |\n| |   | ||  __)   | |      |     __)|  __)   | |   | |\n| |   ) || (      | |      | (\\ (   | (      | |   ) |\n| (__/  )| (____/\\| (____/\\| ) \\ \\__| (____/\\| (__/  )\n(______/ (_______/(_______/|/   \\__/(_______/(______/ \n"
+            if List.isEmpty model.lastTransactions then
+                div [ class "row text-center mt-3 d-none d-sm-block" ]
+                    [ div [ class "col" ]
+                        [ pre [ id "logo", class "text-white" ]
+                            [ text
+                                " ______   _______  _______  _______  _______  ______  \n(  __  \\ (  ____ \\(  ____ \\(  ____ )(  ____ \\(  __  \\ \n| (  \\  )| (    \\/| (    \\/| (    )|| (    \\/| (  \\  )\n| |   ) || (__    | |      | (____)|| (__    | |   ) |\n| |   | ||  __)   | |      |     __)|  __)   | |   | |\n| |   ) || (      | |      | (\\ (   | (      | |   ) |\n| (__/  )| (____/\\| (____/\\| ) \\ \\__| (____/\\| (__/  )\n(______/ (_______/(_______/|/   \\__/(_______/(______/ \n"
+                            ]
                         ]
                     ]
-                ]
+            else
+                span [] []
 
         lastTransactions =
             if List.isEmpty model.lastTransactions then
@@ -245,15 +252,12 @@ view model =
         wrapper model =
             [ div [ class "row" ]
                 [ div
-                    [ class <|
-                        "col"
-                            ++ (if isFetching model then
-                                    " fetching"
-                                else
-                                    ""
-                               )
-                    ]
-                    content
+                    [ class "col" ]
+                    (if isFetching model then
+                        [ searchView model ]
+                     else
+                        content
+                    )
                 ]
             ]
 
