@@ -1,2 +1,3 @@
 elm-stuff/
 /public/assets/js/elm.min.js
+/deploy.sh

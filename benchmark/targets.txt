@@ -1,0 +1,23 @@
+POST https://localhost:8000/rpc
+accept: */*
+accept-encoding: gzip, deflate, br
+content-type: application/json
+origin: https://localhost:8000
+referer: https://localhost:8000/
+@./getblock.json
+
+POST https://localhost:8000/rpc
+accept: */*
+accept-encoding: gzip, deflate, br
+content-type: application/json
+origin: https://localhost:8000
+referer: https://localhost:8000/
+@./getrawtransaction.json
+
+POST https://localhost:8000/rpc
+accept: */*
+accept-encoding: gzip, deflate, br
+content-type: application/json
+origin: https://localhost:8000
+referer: https://localhost:8000/
+@./searchrawtransactions.json
