@@ -17,4 +17,10 @@ clean:
 nginx:
 	sudo -u http -- nginx -c nginx/nginx.conf -p . -g 'daemon off;'
 
-.PHONY: clean nginx
+cache_buster:
+	sudo ./cache_buster.sh
+
+dcrd:
+	./dcrd --rpcuser bitcoin --rpcpass secret
+
+.PHONY: clean nginx cache_buster dcrd

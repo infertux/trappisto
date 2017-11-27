@@ -358,7 +358,7 @@ decodeAmountIn =
     Decode.float
         |> Decode.andThen
             (\float ->
-                if float > 0 then
+                if float >= 0 then
                     Decode.succeed float
                 else if float == -1.0e-8 then
                     --- XXX: unconfirmed txs will return -1 atom as placeholder

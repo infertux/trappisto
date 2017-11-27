@@ -122,11 +122,7 @@ update action model =
 
                 cmd =
                     if WebSocket.isMethod [ "blockconnected", "blockdisconnected" ] message then
-                        Cmd.batch
-                            [ getBestBlock updatedModel
-                            , update (Query updatedModel.query) updatedModel
-                                |> Tuple.second
-                            ]
+                        getBestBlock updatedModel
                     else
                         Cmd.none
             in
@@ -192,14 +188,16 @@ update action model =
         GetBestBlockResult result ->
             case result of
                 Ok bestBlock ->
-                    ( { model
-                        | lastBlockHash = bestBlock.hash
-                        , lastBlockHeight = bestBlock.height
-                        , fetching = False
-                        , error = Nothing
-                      }
-                    , Cmd.none
-                    )
+                    let
+                        updatedModel =
+                            { model
+                                | lastBlockHash = bestBlock.hash
+                                , lastBlockHeight = bestBlock.height
+                                , fetching = False
+                                , error = Nothing
+                            }
+                    in
+                        update (Query updatedModel.query) updatedModel
 
                 Err error ->
                     ( { model
@@ -226,15 +224,6 @@ update action model =
             let
                 ( updatedModel, cmd ) =
                     BlockComponent.update blockMsg model.blockModel
-
-                -- query =
-                --     case blockMsg of
-                --         BlockComponent.GetBlock foo ->
-                --             updatedModel.hash
-                --         BlockComponent.GetBlockHash foo ->
-                --             toString updatedModel.height
-                --         _ ->
-                --             model.query
             in
                 ( { model
                     | template = Block

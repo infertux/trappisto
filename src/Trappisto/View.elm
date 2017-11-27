@@ -127,7 +127,10 @@ statusView model =
             if model.lastBlockHeight < 0 then
                 span [] [ text "??????" ]
             else
-                queryLink model.lastBlockHash (toString model.lastBlockHeight) []
+                queryLink
+                    model.lastBlockHash
+                    (formatNumber model.lastBlockHeight)
+                    []
 
         ( wsClass, wsStatus ) =
             if model.webSocketConnected then

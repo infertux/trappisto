@@ -77,6 +77,16 @@ view model now =
                     ]
                 ]
 
+        header =
+            tr []
+                [ th [] [ text "hash" ]
+                , th [ class "d-none d-sm-block" ] [ text "type" ]
+                , th [] [ text "received" ]
+                , th [ class "d-none d-sm-block" ] [ text "time" ]
+                , th []
+                    [ abbr [ title "confirmations" ] [ text "conf." ] ]
+                ]
+
         transactions model =
             model.transactions
                 |> List.map
@@ -87,7 +97,7 @@ view model now =
                             , td []
                                 [ Transaction.sentToAddress model.address tx |> formatAmount ]
                             , td [ class "d-none d-sm-block" ] [ Transaction.formatTime tx now ]
-                            , td [] [ text <| toString tx.confirmations ]
+                            , td [] [ text <| formatNumber tx.confirmations ]
                             ]
                     )
     in
@@ -100,7 +110,7 @@ view model now =
                         , dcrDataLink <| "address/" ++ model.address
                         ]
                     , div [ class "card-body" ]
-                        [ p [ class "card-text" ] (details model)
+                        [ p [ class "card-text" ] <| details model
                         , hr [] []
                         , div [ class "row" ]
                             [ div [ class "col" ]
@@ -112,16 +122,7 @@ view model now =
                                         ]
                                     ]
                                 , table [ class "table table-dark table-striped" ]
-                                    [ thead []
-                                        [ tr []
-                                            [ th [] [ text "hash" ]
-                                            , th [ class "d-none d-sm-block" ] [ text "type" ]
-                                            , th [] [ text "received" ]
-                                            , th [ class "d-none d-sm-block" ] [ text "time" ]
-                                            , th []
-                                                [ abbr [ title "confirmations" ] [ text "conf." ] ]
-                                            ]
-                                        ]
+                                    [ thead [] [ header ]
                                     , tbody [] <| transactions model
                                     ]
                                 ]

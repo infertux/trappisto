@@ -9,6 +9,7 @@ module Trappisto.Helpers exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Regex
 import Lib.HtmlAttributesExtra as HtmlAttributesExtra
 
 
@@ -31,23 +32,26 @@ formatAmount float =
             -- remove any floating point arithmetic errors
             float * 1.0e8 |> round |> toFloat |> (flip (/)) 1.0e8
     in
-        span [ class "amount" ]
-            [ text <| toString rounded ]
+        span [ class "amount" ] [ text <| formatNumber rounded ]
 
 
-formatNumber : Int -> String
-formatNumber int =
+formatNumber : number -> String
+formatNumber number =
     let
-        split digits =
-            if String.length digits > 3 then
-                digits
-                    |> String.dropRight 3
-                    |> split
-                    |> (::) (String.right 3 digits)
+        string =
+            toString number
+
+        regex =
+            if String.contains "." string then
+                "(\\d)(?=(\\d{3})+(?!\\d)\\.)"
             else
-                [ digits ]
+                "(\\d)(?=(\\d{3})+(?!\\d))"
     in
-        toString int |> split |> List.reverse |> String.join ","
+        Regex.replace
+            Regex.All
+            (Regex.regex regex)
+            (\{ match } -> match ++ ",")
+            string
 
 
 shortAddress : String -> String
