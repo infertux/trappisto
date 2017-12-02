@@ -152,7 +152,7 @@
           }
         });
 
-        // Hook {Ctrl,Cmd}+F to our search bar
+        // hook {Ctrl,Cmd}+F to our search bar
         // XXX: not done in Elm because we cannot call preventDefault() in Elm
         window.addEventListener('keydown', (e) => {
           if ((e.ctrlKey || e.metaKey) && (String.fromCharCode(e.which).toLowerCase() === 'f')) {
