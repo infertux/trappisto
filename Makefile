@@ -26,4 +26,4 @@ dcrd:
 bitcoind:
 	bitcoind -par=-1 -server -txindex -rpcuser=bitcoin -rpcpassword=secret
 
-.PHONY: clean nginx cache_buster dcrd
+.PHONY: watch clean nginx cache_buster dcrd
