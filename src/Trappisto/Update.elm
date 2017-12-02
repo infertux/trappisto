@@ -371,8 +371,7 @@ extractRPCEndpoint location =
     String.concat
         [ "https://"
         , location.host
-        , location.pathname
-        , "rpc"
+        , "/rpc"
         ]
 
 
@@ -381,8 +380,7 @@ extractWSEndpoint location =
     String.concat
         [ "wss://"
         , location.host
-        , location.pathname
-        , "ws"
+        , "/ws"
         ]
 
 
