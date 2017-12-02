@@ -21,6 +21,9 @@ cache_buster:
 	sudo ./cache_buster.sh
 
 dcrd:
-	./dcrd --rpcuser bitcoin --rpcpass secret
+	dcrd --rpcuser bitcoin --rpcpass secret
+
+bitcoind:
+	bitcoind -par=-1 -server -txindex -rpcuser=bitcoin -rpcpassword=secret
 
 .PHONY: clean nginx cache_buster dcrd

@@ -2,6 +2,7 @@
 
 test $UID -eq 0
 
+# XXX: update paths according to your setup
 LOG="/home/infertux/.dcrd/logs/mainnet/dcrd.log"
 CACHE="$(dirname $0)/nginx/cache/rpc"
 
