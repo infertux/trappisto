@@ -11,13 +11,13 @@
     <meta name="description" content="Trappisto - Interactive Block Explorer">
     <meta name="application-name" content="Trappisto">
 
-    <meta property="og:url" content="https://localhost">
+    <!-- <meta property="og:url" content="https://localhost"> -->
     <meta property="og:title" content="Trappisto">
     <meta property="og:description" content="Trappisto - Interactive Block Explorer">
-    <meta property="og:image" content="https://localhost/assets/images/logo.png">
+    <meta property="og:image" content="assets/images/apple-touch-icon.png">
 
-    <link rel="icon" href="assets/images/favicon/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/favicon/apple-touch-icon.png">
+    <link rel="icon" href="assets/images/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon.png">
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
     <link rel="stylesheet" href="assets/open-iconic/font/css/open-iconic-bootstrap.min.css">
@@ -25,9 +25,8 @@
     <script src="assets/js/elm.min.js" async defer></script>
 
     <script>
-        // CONFIGURE ME:
+        // XXX: CONFIGURE ME:
         const coin = 'DCR';
-        // TODO: use fuzzy search to guess coin based on hostname?
 
         document.title = coin + " blockchain - Trappisto";
     </script>
@@ -81,103 +80,89 @@
       }
     </style>
   </head>
+
   <body class="bg-black text-white">
-  <script>
-    window.onerror = function(msg, url, line) {
-      alert('Oops, a JavaScript error occured, please send a screenshot to the website administrator.\nMessage: ' + msg + '\nURL: ' + url + '\nLine: ' + line);
-      return false;
-    };
-  </script>
-
-  <script>
-    var style = document.createElement('style');
-    style.type = 'text/css';
-    style.innerHTML = '.amount::after { content: "' + '\u00a0' + coin + '" };';
-    document.getElementsByTagName('head')[0].appendChild(style);
-  </script>
-
-  <div class="container">
-    <div class="row" style="position:absolute;width:100%;height:100%">
-      <div class="col">
-        <div id="particles-js"></div>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="col">
-        <div id="elm-app">Loading...</div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    window.addEventListener('load', () => {
-      const elmAppDiv = document.querySelector('#elm-app');
-      const elmApp = Elm.Trappisto.embed(elmAppDiv, { coin: coin });
-
-      query = (query) => {
-        console.log("Query: ", query);
-        elmApp.ports.jsToElm.send(["query", query]);
+    <script>
+      window.onerror = function(msg, url, line) {
+        alert('Oops, a JavaScript error occured, please send a screenshot to the website administrator.\nMessage: ' + msg + '\nURL: ' + url + '\nLine: ' + line);
+        return false;
       };
+    </script>
 
-      elmApp.ports.elmToJs.subscribe((params) => {
-        const command = params.shift();
-        console.log('Received command: ' + command, params);
+    <script>
+      // append coin symbol to amounts
+      var style = document.createElement('style');
+      style.type = 'text/css';
+      style.innerHTML = '.amount::after { content: "' + '\u00a0' + coin + '" };';
+      document.getElementsByTagName('head')[0].appendChild(style);
+    </script>
 
-        switch (command) {
-          case 'focus':
-            const query = document.getElementById('query');
-            if (query) {
-              query.focus();
-              setTimeout(function () { query.select(); }, 50); // delay sightly to allow focus to "stick" before selecting
-            }
-            break;
+    <div id="particles-js" style="position:absolute;width:100%;height:100%"></div>
 
-          case 'title':
-            if (params[0] === "") {
-              document.title = coin + " blockchain - Trappisto";
-            } else {
-              document.title = params[0] + " - " + coin + " blockchain - Trappisto";
-            }
-            break;
+    <div class="container">
+      <div class="row">
+        <div class="col">
+          <div id="elm-app">
+            <div class="text-center"><h1>Loading...</h1></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-          case 'particles':
-             particlesJS.load('particles-js', 'assets/js/particles.json', () => {
-                 alert('Congrats, you found the easter egg! Particles are coming at you at supersonic speed!');
-             });
-            break;
+    <script>
+      window.addEventListener('load', () => {
+        // load Elm app
+        const elmAppDiv = document.querySelector('#elm-app');
+        const elmApp = Elm.Trappisto.embed(elmAppDiv, { coin: coin });
 
-          default:
-            console.error('Unhandled command: ' + command);
-        }
+        query = (query) => {
+          console.log("Query: ", query);
+          elmApp.ports.jsToElm.send(["query", query]);
+        };
+
+        elmApp.ports.elmToJs.subscribe((params) => {
+          const command = params.shift();
+          console.log('Received command: ' + command, params);
+
+          switch (command) {
+            case 'focus':
+              const query = document.getElementById('query');
+              if (query) {
+                query.focus();
+                setTimeout(function () { query.select(); }, 50); // delay sightly to allow focus to "stick" before selecting
+              }
+              break;
+
+            case 'title':
+              if (params[0] === "") {
+                document.title = coin + " blockchain - Trappisto";
+              } else {
+                document.title = params[0] + " - " + coin + " blockchain - Trappisto";
+              }
+              break;
+
+            case 'particles':
+               particlesJS.load('particles-js', 'assets/js/particles.json', () => {
+                   alert('Congrats, you found the easter egg! Particles are coming at you at supersonic speed!');
+               });
+              break;
+
+            default:
+              console.error('Unhandled command: ' + command);
+          }
+        });
+
+        // Hook {Ctrl,Cmd}+F to our search bar
+        // XXX: not done in Elm because we cannot call preventDefault() in Elm
+        window.addEventListener('keydown', (e) => {
+          if ((e.ctrlKey || e.metaKey) && (String.fromCharCode(e.which).toLowerCase() === 'f')) {
+            e.preventDefault();
+            document.querySelector('#query').select();
+          }
+        });
       });
+    </script>
 
-      // Hook {Ctrl,Cmd}+F to our search bar
-      // XXX: not done in Elm because we cannot call preventDefault() in Elm
-      window.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && (String.fromCharCode(e.which).toLowerCase() === 'f')) {
-          e.preventDefault();
-          document.querySelector('#query').select();
-        }
-      });
-
-      // Prefill search bar with URL query part
-      // const filter = utils.getParameterByName("filter") || "";
-      // elmUserListApp.ports.jsEvents.send(["UserList.Search", filter]);
-
-      // Fetch more results when we scroll to the bottom
-      // $(window).scroll(function() {
-      //   if($(window).scrollTop() + $(window).height() == $(document).height()) {
-      //     elmUserListApp.ports.jsToElm.send(["UserList.Fetch"]);
-      //   }
-      // });
-
-      // const logo = document.getElementById('logo');
-      // logo.classList.add('glow');
-      // setTimeout(() => { logo.classList.remove('glow'); }, 1000);
-    });
-  </script>
-
-   <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js" async defer></script>
   </body>
 </html>
