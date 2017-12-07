@@ -41,20 +41,14 @@ init flags location =
                 ( model, Cmd.none )
             else
                 update (Query query) model
-
-        notifyBlocks =
-            WebSocket.send model.config.wsEndpoint "notifyblocks" []
-
-        notifyNewTransactions =
-            WebSocket.send model.config.wsEndpoint "notifynewtransactions" []
     in
         ( updatedModel
         , Cmd.batch
             [ elmToJs [ "focus" ]
             , msg
             , getBestBlock updatedModel
-            , notifyBlocks
-            , notifyNewTransactions
+            , notifyBlocks model.config.wsEndpoint
+            , notifyNewTransactions model.config.wsEndpoint
             , Task.perform Tick Time.now
             , Task.perform Resize Window.size
             ]
@@ -78,32 +72,30 @@ update action model =
     case action of
         Tick now ->
             let
-                ping =
-                    WebSocket.send model.config.wsEndpoint "session" []
-
                 timeout =
-                    model.now - model.lastWebSocketPong >= webSocketTTL
+                    model.now - model.webSocketLastPong >= webSocketTTL
 
                 updatedModel =
                     { model
                         | now = now
                         , webSocketConnected = not timeout
                     }
+
+                ping =
+                    WebSocket.send model.config.wsEndpoint "session" []
             in
                 ( updatedModel, ping )
 
         WebSocketMsg message ->
             let
-                -- _ =
-                --     Debug.log "WebSocketMsg" message
                 connected =
                     WebSocket.isSuccess message
 
-                txAccepted =
+                ( txAccepted, debug ) =
                     if WebSocket.isMethod [ "txaccepted" ] message then
-                        Decoder.decodeTxAccepted message
+                        ( Decoder.decodeTxAccepted message, "" )
                     else
-                        Nothing
+                        ( Nothing, Debug.log "WebSocketMsg" message )
 
                 newLastTransactions =
                     case txAccepted of
@@ -113,20 +105,49 @@ update action model =
                         Just tx ->
                             List.take 15 (tx :: model.lastTransactions)
 
+                sessionId =
+                    WebSocket.getSessionId message
+
+                newSessionId =
+                    case sessionId of
+                        Nothing ->
+                            model.webSocketSessionId
+
+                        Just _ ->
+                            sessionId
+
                 updatedModel =
                     { model
                         | webSocketConnected = connected
-                        , lastWebSocketPong = model.now
+                        , webSocketSessionId = newSessionId
+                        , webSocketLastPong = model.now
                         , lastTransactions = newLastTransactions
                     }
 
-                cmd =
-                    if WebSocket.isMethod [ "blockconnected", "blockdisconnected" ] message then
-                        getBestBlock updatedModel
-                    else
-                        Cmd.none
+                hasNewSessionId =
+                    (model.webSocketSessionId /= Nothing)
+                        && (model.webSocketSessionId /= newSessionId)
+
+                hasNewBlock =
+                    WebSocket.isMethod
+                        [ "blockconnected", "blockdisconnected" ]
+                        message
+
+                commands =
+                    case ( hasNewSessionId, hasNewBlock ) of
+                        ( True, _ ) ->
+                            [ getBestBlock updatedModel
+                            , notifyBlocks model.config.wsEndpoint
+                            , notifyNewTransactions model.config.wsEndpoint
+                            ]
+
+                        ( False, True ) ->
+                            [ getBestBlock updatedModel ]
+
+                        ( False, False ) ->
+                            [ Cmd.none ]
             in
-                ( updatedModel, cmd )
+                ( updatedModel, Cmd.batch commands )
 
         NewUrl location ->
             ( { model | query = extractQuery location }, Cmd.none )
@@ -433,6 +454,16 @@ getBestBlock model =
         "getbestblock"
         GetBestBlockResult
         Decoder.decodeGetBestBlock
+
+
+notifyBlocks : String -> Cmd Msg
+notifyBlocks endpoint =
+    WebSocket.send endpoint "notifyblocks" []
+
+
+notifyNewTransactions : String -> Cmd Msg
+notifyNewTransactions endpoint =
+    WebSocket.send endpoint "notifynewtransactions" []
 
 
 webSocketTTL : Time

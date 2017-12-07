@@ -38,7 +38,8 @@ type alias Model =
     , now : Time
     , fetching : Bool
     , webSocketConnected : Bool
-    , lastWebSocketPong : Time
+    , webSocketSessionId : Maybe Int
+    , webSocketLastPong : Time
     , lastBlockHash : String
     , lastBlockHeight : Int
     , lastTransactions : List BasicTransaction
@@ -58,10 +59,11 @@ initialModel config query =
     , error = Nothing
     , vimMode = False
     , debug = False
+    , now = -1
     , fetching = False
     , webSocketConnected = False
-    , now = -1
-    , lastWebSocketPong = -1
+    , webSocketSessionId = Nothing
+    , webSocketLastPong = -1
     , lastBlockHash = ""
     , lastBlockHeight = -1
     , lastTransactions = []

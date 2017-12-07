@@ -1,4 +1,4 @@
-module Lib.WebSocket exposing (listen, send, isSuccess, isMethod)
+module Lib.WebSocket exposing (listen, send, isSuccess, isMethod, getSessionId)
 
 {-
    This allows to send web socket messages to the `/ws` endpoint and parse notification messages.
@@ -62,3 +62,12 @@ isMethod methods jsonString =
 
             Ok maybeMethod ->
                 List.any (\method -> Just method == maybeMethod) methods
+
+
+getSessionId : String -> Maybe Int
+getSessionId jsonString =
+    let
+        decoder =
+            Decode.at [ "result", "sessionid" ] <| Decode.int
+    in
+        Decode.decodeString decoder jsonString |> Result.toMaybe
