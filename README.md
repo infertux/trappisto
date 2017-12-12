@@ -65,7 +65,6 @@ Run:
 ```
 make dcrd
 make nginx
-make cache_buster
 ```
 
 ## License
