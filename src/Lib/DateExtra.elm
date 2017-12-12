@@ -1,18 +1,7 @@
 module Lib.DateExtra exposing (..)
 
 import Date exposing (Date)
-import Time exposing (Time)
 import String
-
-
-unsafeFromString : String -> Date
-unsafeFromString string =
-    case Date.fromString string of
-        Ok date ->
-            date
-
-        Err msg ->
-            Debug.crash ("unsafeFromString")
 
 
 toISOString : Date -> String
@@ -72,21 +61,3 @@ monthToInt month =
 
         Date.Dec ->
             12
-
-
-isWeekend : Date -> Bool
-isWeekend day =
-    case Date.dayOfWeek day of
-        Date.Sat ->
-            True
-
-        Date.Sun ->
-            True
-
-        _ ->
-            False
-
-
-diffDays : Time -> Time -> Time
-diffDays from to =
-    (to - from) / (86400 * Time.second)

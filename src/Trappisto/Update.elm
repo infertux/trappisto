@@ -4,7 +4,6 @@ import Navigation
 import Keyboard
 import Task exposing (Task)
 import Time exposing (Time)
-import Window
 import Lib.JsonRpc as JsonRpc
 import Lib.WebSocket as WebSocket
 import Components.Address as AddressComponent
@@ -50,7 +49,6 @@ init flags location =
             , notifyBlocks model.config.wsEndpoint
             , notifyNewTransactions model.config.wsEndpoint
             , Task.perform Tick Time.now
-            , Task.perform Resize Window.size
             ]
         )
 
@@ -60,7 +58,6 @@ subscriptions model =
     Sub.batch
         [ Keyboard.downs (KeyChange True)
         , Keyboard.ups (KeyChange False)
-        , Window.resizes Resize
         , Time.every webSocketTTL Tick
         , WebSocket.listen model.config.wsEndpoint WebSocketMsg
         , jsToElm JsMsg
@@ -301,9 +298,6 @@ update action model =
                     update (Query updatedModel.query) updatedModel
                 else
                     ( updatedModel, Cmd.none )
-
-        Resize size ->
-            ( { model | window = size }, Cmd.none )
 
 
 fetchAddress : String -> Model -> ( Model, Cmd Msg )

@@ -1,7 +1,6 @@
 module Trappisto.Model exposing (..)
 
 import Navigation
-import Window
 import Keyboard
 import Time exposing (Time)
 import Http exposing (Error)
@@ -26,7 +25,6 @@ type Template
 type alias Model =
     { config : Config
     , keys : Keys
-    , window : Window.Size
     , addressModel : AddressComponent.Model
     , blockModel : BlockComponent.Model
     , transactionModel : TransactionComponent.Model
@@ -50,7 +48,6 @@ initialModel : Config -> String -> Model
 initialModel config query =
     { config = config
     , keys = Keys False False False False False False
-    , window = Window.Size 0 0
     , addressModel = AddressComponent.initialModel config
     , blockModel = BlockComponent.initialModel config
     , transactionModel = TransactionComponent.initialModel config
@@ -79,7 +76,6 @@ type Msg
     | WebSocketMsg String
     | Query String
     | KeyChange Bool Keyboard.KeyCode
-    | Resize Window.Size
     | Tick Time
     | GetBestBlockResult (Result Http.Error BestBlock)
 

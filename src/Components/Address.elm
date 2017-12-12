@@ -15,7 +15,6 @@ import Components.Transaction as Transaction
 type alias Model =
     { address : String
     , transactions : List Transaction.Model
-    , tickets : List String
     , fetching : Bool
     , error : Maybe String
     , config : Config
@@ -26,7 +25,6 @@ initialModel : Config -> Model
 initialModel config =
     { address = ""
     , transactions = []
-    , tickets = []
     , fetching = False
     , error = Nothing
     , config = config
@@ -37,7 +35,6 @@ modelFromJson : JsonModel -> Config -> Model
 modelFromJson jsonModel config =
     { address = jsonModel.address
     , transactions = List.map (\tx -> Transaction.modelFromJson tx config) jsonModel.transactions
-    , tickets = []
     , fetching = False
     , error = Nothing
     , config = config
@@ -53,8 +50,6 @@ type alias JsonModel =
 type Msg
     = SearchRawTransactions String
     | SearchRawTransactionsResult (Result Http.Error JsonModel)
-    | TicketsForAddress String
-    | TicketsForAddressResult (Result Http.Error (List String))
 
 
 view : Model -> Time -> Html a
@@ -170,10 +165,6 @@ update msg model =
                       }
                     , Cmd.none
                     )
-
-        _ ->
-            -- TODO: tickets
-            ( model, Cmd.none )
 
 
 searchRawTransactions : Model -> String -> Cmd Msg
