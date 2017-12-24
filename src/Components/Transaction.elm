@@ -134,17 +134,23 @@ view model now =
                 DCR ->
                     [ ( "total sent", Just <| formatAmount (totalSent model) )
                     , ( "fee"
-                      , Just <|
-                            span []
-                                (if fee model == 0 then
-                                    [ formatAmount (fee model) ]
-                                 else
-                                    [ formatAmount (fee model)
-                                    , span [] [ text " (" ]
-                                    , formatAmount (feePerKb model)
-                                    , span [] [ text "/kB)" ]
-                                    ]
-                                )
+                      , (if model.confirmations == 0 then
+                            --- XXX: actual fee is not returned by RPC for
+                            --- unconfirmed transactions
+                            Nothing
+                         else
+                            Just <|
+                                span []
+                                    (if fee model == 0 then
+                                        [ formatAmount (fee model) ]
+                                     else
+                                        [ formatAmount (fee model)
+                                        , span [] [ text " (" ]
+                                        , formatAmount (feePerKb model)
+                                        , span [] [ text "/kB)" ]
+                                        ]
+                                    )
+                        )
                       )
                     ]
 
