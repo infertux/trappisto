@@ -66,8 +66,9 @@ parseError error =
     case error of
         Http.BadStatus response ->
             Just <|
-                "Backend error "
+                "Backend error: "
                     ++ toString response.status.code
+                    ++ " "
                     ++ response.status.message
 
         Http.BadPayload message response ->
