@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Decred Blockchain Explorer</title>
+    <title>Bitcoin Cash Blockchain Explorer</title>
 
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <meta name="description" content="Decred Blockchain Explorer">
+    <meta name="description" content="Bitcoin Cash Blockchain Explorer">
     <meta name="application-name" content="Trappisto">
 
-    <meta property="og:title" content="Interactive Blockchain Explorer for Decred">
-    <meta property="og:description" content="Interactive Blockchain Explorer for Decred">
+    <meta property="og:title" content="Interactive Blockchain Explorer for Bitcoin Cash">
+    <meta property="og:description" content="Interactive Blockchain Explorer for Bitcoin Cash">
     <meta property="og:image" content="assets/images/apple-touch-icon.png">
 
     <link rel="icon" href="assets/images/favicon.ico">
@@ -52,7 +52,7 @@
       }
 
       .amount::after {
-        content: "\0000a0DCR";
+        content: "\0000a0BCH";
       }
 
       .bg-black {
@@ -95,7 +95,7 @@
       window.addEventListener('load', () => {
         // load Elm app
         const elmAppDiv = document.querySelector('#elm-app');
-        const elmApp = Elm.Trappisto.embed(elmAppDiv, { coin: 'DCR' });
+        const elmApp = Elm.Trappisto.embed(elmAppDiv, { coin: 'BCH' });
 
         query = (query) => {
           console.log("Query: ", query);
@@ -117,9 +117,9 @@
 
             case 'title':
               if (params[0] === "") {
-                document.title = "Decred Blockchain Explorer";
+                document.title = "Bitcoin Cash Blockchain Explorer";
               } else {
-                document.title = params[0] + " - Decred Blockchain Explorer";
+                document.title = params[0] + " - Bitcoin Cash Blockchain Explorer";
               }
               break;
 

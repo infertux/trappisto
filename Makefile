@@ -5,6 +5,16 @@ trappisto: src/*.elm
 	uglifyjs --mangle --screw-ie8 --output public/assets/js/elm.min.js -- public/assets/js/elm.js
 	rm public/assets/js/elm.js
 
+trappisto-btc: trappisto
+	cp public/index.html public/index-btc.html
+	sed -i 's/DCR/BTC/g' public/index-btc.html
+	sed -i 's/Decred/Bitcoin/g' public/index-btc.html
+
+trappisto-bch: trappisto
+	cp public/index.html public/index-bch.html
+	sed -i 's/DCR/BCH/g' public/index-bch.html
+	sed -i 's/Decred/Bitcoin Cash/g' public/index-bch.html
+
 test: src/*.elm tests/*.elm
 	elm-test --yes
 

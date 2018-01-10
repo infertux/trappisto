@@ -26,7 +26,7 @@ and transactions.
 
 To configure Trappisto for a different coin, you will need to:
 
-- update `const coin = 'DCR'` in _index.html_
+- build it with `make trappisto-btc` or `make trappisto-bch` instead of `make`
 - update `proxy_pass https://localhost:9109/;` in _nginx.conf_
 
 ## What does Trappisto mean?

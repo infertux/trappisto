@@ -103,8 +103,11 @@ searchView model =
                                  else
                                     "img-fluid"
                                 )
-                            , src "assets/images/decred.png"
                             , alt "logo"
+                            , src <|
+                                "assets/images/"
+                                    ++ (toString model.config.coin)
+                                    ++ ".png"
                             ]
                             []
                         ]
