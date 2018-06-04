@@ -354,7 +354,7 @@ decodeVIn =
             )
             Nothing
         |> Pipeline.optionalAt [ "coinbase" ] (Decode.maybe Decode.string) Nothing
-        |> Pipeline.requiredAt [ "amountin" ] decodeAmountIn
+        |> Pipeline.optionalAt [ "amountin" ] decodeAmountIn 0
         |> Pipeline.optionalAt [ "blockheight" ] (Decode.maybe Decode.int) Nothing
         |> Pipeline.optionalAt [ "prevOut" ] (Decode.maybe decodePrevOut) Nothing
 

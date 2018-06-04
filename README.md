@@ -24,10 +24,7 @@ This means it is not possible to browse addresses as we have no way to retrieve
 transactions for a particular address. However it is possible to explore blocks
 and transactions.
 
-To configure Trappisto for a different coin, you will need to:
-
-- build it with `make trappisto-btc` or `make trappisto-bch` instead of `make`
-- update `proxy_pass https://localhost:9109/;` in _nginx.conf_
+To configure Trappisto for a different coin, you will need to adjust `file.index: [ 'index-dcr.html' ]` in _h2o.conf_.
 
 ## What does Trappisto mean?
 
@@ -64,7 +61,7 @@ Run:
 
 ```
 make dcrd
-make nginx
+make h2o
 ```
 
 ## License
